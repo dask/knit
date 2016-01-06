@@ -4,7 +4,7 @@ Builds against cdh 5.5.1 hadoop 2.6.0
 
 ```
 mvn clean install
-``
+```
 
 ## Installation
 
@@ -13,11 +13,7 @@ hdfs dfs -put -f ./rambling-1.0-SNAPSHOT.jar /jars
 
 ## Execute
 ```
-hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://salt-master-hostname:9000/jars/rambling-1.0-SNAPSHOT.jar 1
-
-hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client "python -c 'import socket; print(socket.gethostname())'" 1
-
-hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://salt-master-hostname:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
+hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client 1 hdfs://{{NAMENODE}}:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 ```
 
 Originally forked from: https://github.com/phatak-dev/blog/tree/master/code/YarnScalaHelloWorld

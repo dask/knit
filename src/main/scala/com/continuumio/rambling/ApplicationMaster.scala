@@ -20,10 +20,14 @@ object ApplicationMaster {
   def main(args: Array[String]) {
     val jarPath = args(0)
     val n = args(1).toInt
-    val shellCMD = args.drop(2)
-    println(shellCMD.mkString(" "))
-    println("BEEP!")
-    val test = "\""+shellCMD.mkString(" ")+"\""
+    val shellCMD = args(2)
+    println("Running command in container: " + shellCMD)
+    val cmd = List(
+      shellCMD +
+        " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+        " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
+    )
+    println(cmd)
 
     implicit val conf = new YarnConfiguration()
 
@@ -73,7 +77,7 @@ object ApplicationMaster {
           Records.newRecord(classOf[ContainerLaunchContext])
         ctx.setCommands(
           List(
-            "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'" +
+            shellCMD +
               " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
               " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
           ).asJava

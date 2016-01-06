@@ -31,10 +31,10 @@ object Client extends Logging {
     implicit val conf = new YarnConfiguration()
     val jarPath = args(0)
     val numberOfInstances = args(1).toInt
-    val shellCMD = args.drop(2).mkString(" ")
+    val shellCMD = "\\\""+args(2)+"\\\""
     logger.info("Running commmand: " + shellCMD)
 
-//    val fs = FileSystem.get(conf);
+    //    val fs = FileSystem.get(conf);
 //    fs.copyFromLocalFile(new Path("/vagrant/rambling-1.0-SNAPSHOT.jar"), new Path("/tmp/rambling-1.0-SNAPSHOT.jar"));
 
     // start a yarn client
@@ -50,7 +50,7 @@ object Client extends Logging {
       "$JAVA_HOME/bin/java" +
         " -Xmx256M" +
         " com.continuumio.rambling.ApplicationMaster" +
-        "  "  + jarPath +"   " + numberOfInstances + "  " + "\"" + shellCMD + "\"" +
+        "  "  + jarPath +"   " + numberOfInstances + "  " + shellCMD +
         " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
         " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
     ).asJava)
