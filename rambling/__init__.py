@@ -5,7 +5,7 @@ import subprocess
 from subprocess import Popen, PIPE
 
 JAR_FILE = "rambling-1.0-SNAPSHOT.jar"
-NAMENODE = "salt-master-hostname:9000" or os.environ.get("NAMENODE")
+NAMENODE = os.environ.get("NAMENODE") or "salt-master-hostname:9000"
 HDFS_JAR_PATH = os.path.join("hdfs://", NAMENODE, "jars", JAR_FILE)
 JAVA_APP = "com.continuumio.rambling.Client"
 
