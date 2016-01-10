@@ -16,6 +16,17 @@ alias yarn-log='yarn logs -applicationId'
 alias yarn-kill='yarn application -kill'
 
 ## Execute
+
+### Python
+```
+import rambling
+r = rambling.Rambling(namenode="ip-XX-XXX-XX", resourcemanager="ip-XX-XXX-XX")
+cmd = "python -c 'import sys; print(sys.path); import socket; print(socket.gethostname())'"
+appId = r.start_application(cmd)
+r.get_application_logs(appId)
+```
+
+### JAVA
 ```
 hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://{{NAMENODE}}:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 ```
