@@ -1,11 +1,11 @@
 FROM ubuntu:trusty
 
-# conda
+# anaconda
 RUN apt-get update && apt-get install -y -q curl bzip2
 RUN curl http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
-RUN /bin/bash /tmp/miniconda.sh -b -p /opt/conda
+RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
-ENV PATH /opt/conda/bin:$PATH
+ENV PATH /opt/anaconda/bin:$PATH
 
 # Cloudera repositories
 RUN curl -s http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key | apt-key add -
@@ -17,12 +17,5 @@ ADD docker-files/cloudera.pref /etc/apt/preferences.d/cloudera.pref
 ADD docker-files/cdh5-install.sh /tmp/cdh5-install.sh
 RUN bash /tmp/cdh5-install.sh
 
-EXPOSE 8020
-EXPOSE 50070
-EXPOSE 8088
-
-VOLUME /rambling
-WORKDIR /rambling
-
+CMD ["ls"]
 ADD docker-files/start.sh /tmp/start.sh
-CMD ["bash", "/tmp/start.sh"]

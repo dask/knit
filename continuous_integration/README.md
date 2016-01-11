@@ -4,6 +4,7 @@
 
 Requirements:
 -  `docker`
+- `docker-compose`
 
 Build the container:
 ```bash
@@ -13,10 +14,8 @@ docker build -t rambling .
 Start the container and wait for the it to be ready:
 
 ```bash
-docker run -it -p 8020:8020 -p 50070:50070 -p 9026:9026 rambling
+docker-compose up
 ```
-
-Now the port `8020` and `50070` are in the host are pointing to the container and the source code (as a shared volume) is available in the container under `/hdfs3`
 
 To start a bash session in the running container:
 
@@ -28,9 +27,8 @@ export CONTAINER_ID=$(docker ps -l -q)
 docker exec -it $CONTAINER_ID bash
 ```
 
-Now that we are in the container we can install the library and run the test:
 
 ```bash
-python setup.py install
-py.test hdfs3 -s -vv
+hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://localhost:8020/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 ```
+

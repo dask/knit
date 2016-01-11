@@ -1,0 +1,11 @@
+rambling:
+  build: .
+  ports:
+   - "8020:8020"
+   - "50070:50070"
+   - "8032:8032"
+  entrypoint: sudo bash /tmp/start.sh
+  volumes:
+   - ../rambling:/rambling
+   - ../rambling_jvm:/rambling_jvm
+   - .:/code
