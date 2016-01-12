@@ -32,3 +32,5 @@ hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://{{
 ```
 
 Originally forked from: https://github.com/phatak-dev/blog/tree/master/code/YarnScalaHelloWorld
+
+./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://localhost:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
