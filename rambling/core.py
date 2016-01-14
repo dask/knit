@@ -13,9 +13,11 @@ JAVA_APP = "com.continuumio.rambling.Client"
 
 
 class Rambling(object):
-    def __init__(self, namenode="localhost", nm_port=9000, resourcemanager="localhost", rm_port=9026):
+    def __init__(self, namenode="localhost", nm_port=9000,
+                 resourcemanager="localhost", rm_port=9026):
         """
         Connection to HDFS/YARN
+
         Parameters
         ----------
         namenode: str
@@ -24,6 +26,8 @@ class Rambling(object):
             Namenode Port (default: 9000)
         resourcemanager: str
             Resource Manager hostname/ip
+        rm_port: int
+            Resource Manager port (default: 9026)
         rm_port: int
             Resource Manager port (default: 9026)
         """
@@ -40,28 +44,39 @@ class Rambling(object):
 
 
 
-    def start_application(self, cmd, num_containers=1):
+    def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128):
         """
         Method to start a yarn app with a distributed shell
 
         Parameters
         ----------
-        num_containers: int
-            number of containers to start (default 1)
-
         cmd: str
             command to run in each yarn container
+        num_containers: int
+            number of containers to start (default 1)
+        num_containers: int
+            Number of containers YARN should request (default: 1)
+            * A container should be requested with the number of cores it can saturate, i.e.
+            * the average number of threads it expects to have runnable at a time.
+        virtual_cores: int
+            Number of virtual cores per container (default: 1)
+            * A node's capacity should be configured with virtual cores equal to
+            * its number of physical cores.
+        memory: int
+            Memory per container (default: 128)
+            * The unit for memory is megabytes.
 
         Returns
         -------
         applicationId: str
             A yarn application ID string
-
         """
 
         JAR_FILE_PATH = os.path.join(os.path.dirname(__file__), "java_libs", JAR_FILE)
-        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, self.HDFS_JAR_PATH, str(num_containers), cmd]
+        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, self.HDFS_JAR_PATH,
+                str(num_containers), cmd, str(virtual_cores), str(memory)]
 
+        logger.debug("Running Command: {}".format(' '.join(args)))
         proc = subprocess.Popen(args, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate()
 

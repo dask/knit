@@ -15,7 +15,7 @@ alias yarn-status='yarn application -status'
 alias yarn-log='yarn logs -applicationId'
 alias yarn-kill='yarn application -kill'
 
-## Execute
+## Usage
 
 ### Python
 ```
@@ -28,7 +28,7 @@ r.get_application_logs(appId)
 
 ### JAVA
 ```
-hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://{{NAMENODE}}:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
+hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://{{NAMENODE}}:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))' 1 128"
 ```
 
 Originally forked from: https://github.com/phatak-dev/blog/tree/master/code/YarnScalaHelloWorld
