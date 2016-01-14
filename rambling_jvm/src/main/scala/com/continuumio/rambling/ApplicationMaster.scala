@@ -21,6 +21,9 @@ object ApplicationMaster {
     val jarPath = args(0)
     val n = args(1).toInt
     val shellCMD = args(2)
+    val vCores = args(3).toInt
+    val mem = args(4).toInt
+
     println("Running command in container: " + shellCMD)
     val cmd = List(
       shellCMD +
@@ -48,8 +51,8 @@ object ApplicationMaster {
 
     //resources needed by each container
     val resource = Records.newRecord(classOf[Resource])
-    resource.setMemory(128)
-    resource.setVirtualCores(1)
+    resource.setMemory(mem)
+    resource.setVirtualCores(vCores)
 
 
     //request for containers

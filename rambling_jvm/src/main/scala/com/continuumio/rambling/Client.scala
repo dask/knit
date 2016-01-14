@@ -32,6 +32,9 @@ object Client extends Logging {
     val jarPath = args(0)
     val numberOfInstances = args(1).toInt
     val shellCMD = "\\\""+args(2)+"\\\""
+    val vCores = args(3).toInt
+    val mem = args(4).toInt
+
     logger.info("Running commmand: " + shellCMD)
 
     //    val fs = FileSystem.get(conf);
@@ -50,7 +53,7 @@ object Client extends Logging {
       "$JAVA_HOME/bin/java" +
         " -Xmx256M" +
         " com.continuumio.rambling.ApplicationMaster" +
-        "  "  + jarPath +"   " + numberOfInstances + "  " + shellCMD +
+        "  "  + jarPath +"   " + numberOfInstances + "  " + shellCMD + " " + vCores + " " + mem + " " +
         " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
         " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
     ).asJava)
@@ -68,6 +71,8 @@ object Client extends Logging {
 
     //specify resource requirements
     val resource = Records.newRecord(classOf[Resource])
+
+    //The unit for memory is megabytes
     resource.setMemory(300)
     resource.setVirtualCores(1)
 
