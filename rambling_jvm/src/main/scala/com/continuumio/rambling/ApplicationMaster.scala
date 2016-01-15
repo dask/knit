@@ -1,6 +1,7 @@
 package com.continuumio.rambling
 
 import java.util.Collections
+import java.net._
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.yarn.api.ApplicationConstants
@@ -69,7 +70,9 @@ object ApplicationMaster {
 
       //setup local resources
       val appMasterPython = Records.newRecord(classOf[LocalResource])
-      setUpLocalResource(new Path("hdfs://localhost:9000/jars/miniconda-env.zip"),appMasterPython, archived = true)
+      val uri = new URI(jarPath)
+      val hdfsURI = jarPath.replace(uri.getPath, "")
+      setUpLocalResource(new Path(hdfsURI + "/jars/miniconda-env.zip"),appMasterPython, archived = true)
 
       //set up local ENV
       val env = collection.mutable.Map[String,String]()

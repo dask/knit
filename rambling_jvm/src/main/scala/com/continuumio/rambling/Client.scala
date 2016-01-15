@@ -1,6 +1,7 @@
 package com.continuumio.rambling
 
 import java.util.Collections
+import java.net._
 
 import com.continuumio.rambling.Utils._
 import org.apache.hadoop.fs.Path
@@ -32,9 +33,12 @@ object Client extends Logging {
     implicit val conf = new YarnConfiguration()
     val jarPath = args(0)
     val numberOfInstances = args(1).toInt
-    val shellCMD = "\\\""+args(2)+"\\\""
+    val CMD = args(2)
     val vCores = args(3).toInt
     val mem = args(4).toInt
+
+    val cleanedCMD = CMD.replace("\"", "\'")
+    val shellCMD = "\\\""+cleanedCMD+"\\\""
 
     logger.info("Running commmand: " + shellCMD)
 
@@ -54,12 +58,19 @@ object Client extends Logging {
     val appMasterJar = Records.newRecord(classOf[LocalResource])
     setUpLocalResource(new Path(jarPath), appMasterJar)
 
+    val uri = new URI(jarPath)
+    val hdfsURI = jarPath.replace(uri.getPath, "")
     val appMasterPython = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(new Path("hdfs://localhost:9000/jars/miniconda-env.zip"),appMasterPython, archived = true)
+    setUpLocalResource(new Path(hdfsURI + "/jars/miniconda-env.zip"),appMasterPython, archived = true)
 
     val localResources = HashMap[String, LocalResource]()
     localResources("PYTHON_DIR") = appMasterPython
     localResources("PYTHON_DIR3") = appMasterPython
+
+    //add the jar which contains the Application master code to classpath
+    localResources("rambling.jar") = appMasterJar
+
+
     amContainer.setLocalResources(localResources.asJava)
 
     //setup env to get all yarn and hadoop classes in classpath
@@ -68,9 +79,6 @@ object Client extends Logging {
     env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
     setUpEnv(env)
     amContainer.setEnvironment(env.asJava)
-
-    logger.info("container spec: ")
-    logger.info(amContainer.toString())
 
     //application master is a just java program with given commands
     amContainer.setCommands(List(
