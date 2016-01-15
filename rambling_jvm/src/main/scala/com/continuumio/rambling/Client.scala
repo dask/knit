@@ -15,6 +15,7 @@ import org.apache.hadoop.yarn.util.Records
 import org.apache.log4j.Logger
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 /**
  * Entry point into the Yarn application.
@@ -26,7 +27,7 @@ object Client extends Logging {
 
   def main(args: Array[String]) {
 
-    logger.error("Staring Application Master")
+    logger.info("Staring Application Master")
 
     implicit val conf = new YarnConfiguration()
     val jarPath = args(0)
@@ -48,6 +49,29 @@ object Client extends Logging {
     // application creation
     val app = client.createApplication()
     val amContainer = Records.newRecord(classOf[ContainerLaunchContext])
+
+    //add the jar which contains the Application master code to classpath
+    val appMasterJar = Records.newRecord(classOf[LocalResource])
+    setUpLocalResource(new Path(jarPath), appMasterJar)
+
+    val appMasterPython = Records.newRecord(classOf[LocalResource])
+    setUpLocalResource(new Path("hdfs://localhost:9000/jars/miniconda-env.zip"),appMasterPython, archived = true)
+
+    val localResources = HashMap[String, LocalResource]()
+    localResources("PYTHON_DIR") = appMasterPython
+    localResources("PYTHON_DIR3") = appMasterPython
+    amContainer.setLocalResources(localResources.asJava)
+
+    //setup env to get all yarn and hadoop classes in classpath
+    val env = collection.mutable.Map[String, String]()
+    env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
+    env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
+    setUpEnv(env)
+    amContainer.setEnvironment(env.asJava)
+
+    logger.info("container spec: ")
+    logger.info(amContainer.toString())
+
     //application master is a just java program with given commands
     amContainer.setCommands(List(
       "$JAVA_HOME/bin/java" +
@@ -57,17 +81,6 @@ object Client extends Logging {
         " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
         " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
     ).asJava)
-
-
-    //add the jar which contains the Application master code to classpath
-    val appMasterJar = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(new Path(jarPath), appMasterJar)
-    amContainer.setLocalResources(Collections.singletonMap("rambling.jar", appMasterJar))
-
-    //setup env to get all yarn and hadoop classes in classpath
-    val env = collection.mutable.Map[String, String]()
-    setUpEnv(env)
-    amContainer.setEnvironment(env.asJava)
 
     //specify resource requirements
     val resource = Records.newRecord(classOf[Resource])

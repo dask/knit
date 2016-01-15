@@ -12,7 +12,7 @@ import org.apache.hadoop.yarn.util.Records
 import Utils._
 
 import scala.collection.JavaConverters._
-
+import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 object ApplicationMaster {
 
@@ -67,10 +67,14 @@ object ApplicationMaster {
 
     while( completedContainers < n) {
 
-      val appMasterJar = Records.newRecord(classOf[LocalResource])
-      setUpLocalResource(new Path(jarPath),appMasterJar)
+      //setup local resources
+      val appMasterPython = Records.newRecord(classOf[LocalResource])
+      setUpLocalResource(new Path("hdfs://localhost:9000/jars/miniconda-env.zip"),appMasterPython, archived = true)
 
+      //set up local ENV
       val env = collection.mutable.Map[String,String]()
+      env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
+      env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
       setUpEnv(env)
 
       val response = rmClient.allocate(responseId+1)
@@ -85,6 +89,12 @@ object ApplicationMaster {
               " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
           ).asJava
         )
+
+        //setup local resources
+        val localResources = HashMap[String, LocalResource]()
+        localResources("PYTHON_DIR") = appMasterPython
+        localResources("PYTHON_DIR3") = appMasterPython
+        ctx.setLocalResources(localResources.asJava)
         ctx.setEnvironment(env.asJava)
 
         System.out.println("Launching container " + container)
