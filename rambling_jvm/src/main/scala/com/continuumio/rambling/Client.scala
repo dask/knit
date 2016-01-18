@@ -1,9 +1,14 @@
 package com.continuumio.rambling
 
-import java.util.Collections
-import java.net._
-
 import com.continuumio.rambling.Utils._
+import com.continuumio.rambling.ClientArguments.parseArgs
+
+import java.net._
+import java.util.Collections
+
+import scala.collection.JavaConverters._
+import scala.collection.mutable.{ArrayBuffer, HashMap}
+
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
@@ -15,8 +20,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.Records
 import org.apache.log4j.Logger
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 /**
  * Entry point into the Yarn application.
@@ -27,15 +30,17 @@ import scala.collection.mutable.{ArrayBuffer, HashMap}
 object Client extends Logging {
 
   def main(args: Array[String]) {
+    val parsedArgs = parseArgs(args)
+    println(parsedArgs)
 
     logger.info("Staring Application Master")
 
     implicit val conf = new YarnConfiguration()
-    val jarPath = args(0)
-    val numberOfInstances = args(1).toInt
-    val CMD = args(2)
-    val vCores = args(3).toInt
-    val mem = args(4).toInt
+    val jarPath = parsedArgs.jarPath
+    val numberOfInstances = parsedArgs.numInstances
+    val CMD = parsedArgs.command
+    val vCores = parsedArgs.virutalCores
+    val mem = parsedArgs.memory
 
     val cleanedCMD = CMD.replace("\"", "\'")
     val shellCMD = "\\\""+cleanedCMD+"\\\""
