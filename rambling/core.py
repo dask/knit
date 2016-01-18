@@ -71,8 +71,9 @@ class Rambling(object):
         """
 
         JAR_FILE_PATH = os.path.join(os.path.dirname(__file__), "java_libs", JAR_FILE)
-        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, self.HDFS_JAR_PATH,
-                str(num_containers), cmd, str(virtual_cores), str(memory)]
+        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, "--jarPath", self.HDFS_JAR_PATH,
+                "--numInstances", str(num_containers), "--command", cmd, "--virutalCores",
+                str(virtual_cores), "--memory", str(memory)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)

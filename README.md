@@ -28,9 +28,9 @@ r.get_application_logs(appId)
 
 ### JAVA
 ```
+hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client --help
 hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client --jarPath hdfs://{{NAMENODE}}:9000/jars/rambling-1.0-SNAPSHOT.jar --numInstances 1 --command "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 ```
-hadoop jar ./target/rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client --jarPath hdfs://localhost:9000/jars/rambling-1.0-SNAPSHOT.jar --numInstances 1 --command "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 
 Originally forked from: https://github.com/phatak-dev/blog/tree/master/code/YarnScalaHelloWorld
 
