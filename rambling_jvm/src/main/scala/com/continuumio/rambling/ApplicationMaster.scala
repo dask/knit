@@ -1,6 +1,7 @@
 package com.continuumio.rambling
 
 import java.util.Collections
+import java.net._
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.yarn.api.ApplicationConstants
@@ -12,7 +13,7 @@ import org.apache.hadoop.yarn.util.Records
 import Utils._
 
 import scala.collection.JavaConverters._
-
+import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 object ApplicationMaster {
 
@@ -21,6 +22,9 @@ object ApplicationMaster {
     val jarPath = args(0)
     val n = args(1).toInt
     val shellCMD = args(2)
+    val vCores = args(3).toInt
+    val mem = args(4).toInt
+
     println("Running command in container: " + shellCMD)
     val cmd = List(
       shellCMD +
@@ -48,8 +52,8 @@ object ApplicationMaster {
 
     //resources needed by each container
     val resource = Records.newRecord(classOf[Resource])
-    resource.setMemory(128)
-    resource.setVirtualCores(1)
+    resource.setMemory(mem)
+    resource.setVirtualCores(vCores)
 
 
     //request for containers
@@ -64,10 +68,16 @@ object ApplicationMaster {
 
     while( completedContainers < n) {
 
-      val appMasterJar = Records.newRecord(classOf[LocalResource])
-      setUpLocalResource(new Path(jarPath),appMasterJar)
+      //setup local resources
+      val appMasterPython = Records.newRecord(classOf[LocalResource])
+      val uri = new URI(jarPath)
+      val hdfsURI = jarPath.replace(uri.getPath, "")
+      setUpLocalResource(new Path(hdfsURI + "/jars/miniconda-env.zip"),appMasterPython, archived = true)
 
+      //set up local ENV
       val env = collection.mutable.Map[String,String]()
+      env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
+      env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
       setUpEnv(env)
 
       val response = rmClient.allocate(responseId+1)
@@ -82,6 +92,12 @@ object ApplicationMaster {
               " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
           ).asJava
         )
+
+        //setup local resources
+        val localResources = HashMap[String, LocalResource]()
+        localResources("PYTHON_DIR") = appMasterPython
+        localResources("PYTHON_DIR3") = appMasterPython
+        ctx.setLocalResources(localResources.asJava)
         ctx.setEnvironment(env.asJava)
 
         System.out.println("Launching container " + container)

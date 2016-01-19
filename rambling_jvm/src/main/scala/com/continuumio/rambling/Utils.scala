@@ -14,12 +14,15 @@ import scala.collection.JavaConverters._
 object Utils {
 
   // add details of the local resource*
-  def setUpLocalResource(resourcePath: Path, resource: LocalResource)(implicit conf:Configuration) = {
+  def setUpLocalResource(resourcePath: Path, resource: LocalResource, archived: Boolean = false)(implicit conf:Configuration) = {
+
+    val fileType = if (archived) LocalResourceType.ARCHIVE else LocalResourceType.FILE
+
     val jarStat = FileSystem.get(conf).getFileStatus(resourcePath)
     resource.setResource(ConverterUtils.getYarnUrlFromPath(resourcePath))
     resource.setSize(jarStat.getLen())
     resource.setTimestamp(jarStat.getModificationTime())
-    resource.setType(LocalResourceType.FILE)
+    resource.setType(fileType)
     resource.setVisibility(LocalResourceVisibility.PUBLIC)
   }
 
