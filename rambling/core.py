@@ -89,18 +89,32 @@ class Rambling(object):
         appId = re.sub('id', '', appId)
         return appId
 
-    def get_application_logs(self, app_id):
+    def get_application_logs(self, app_id, shell=False):
         """
         Parameters
         ----------
         app_id: str
              A yarn application ID string
+        shell: bool
+             Shell out to yarn CLI (default False)
 
         Returns
         -------
         log: dictionary
             logs from each container
         """
+
+        if shell:
+
+            args = ["yarn", "logs", "-applicationId", app_id]
+
+            proc = Popen(args, stdout=PIPE, stderr=PIPE)
+            out, err = proc.communicate()
+
+            logger.debug(out)
+            logger.debug(err)
+            return out
+
         host_port = "{}:{}".format(self.resourcemanager, self.rm_port)
         url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
         logger.debug("Getting Resource Manager Info: {}".format(url))
@@ -147,6 +161,27 @@ class Rambling(object):
             logs[c['id']] = log
 
         return logs
+
+    def get_application_status(self, app_id):
+        """
+
+        Parameters
+        ----------
+        app_id: str
+             A yarn application ID string
+
+        Returns
+        -------
+        log: dictionary
+            status of application
+        """
+        host_port = "{}:{}".format(self.resourcemanager, self.rm_port)
+        url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
+        logger.debug("Getting Application Info: {}".format(url))
+        r = requests.get(url)
+        data = r.json()
+
+        return data
 
     def kill_application(self, application_id):
         """
