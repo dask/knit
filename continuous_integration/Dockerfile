@@ -6,6 +6,8 @@ RUN curl http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -o 
 RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
 ENV PATH /opt/anaconda/bin:$PATH
+RUN conda install -y -q pytest
+RUN conda create -y -n py3 python=3 pytest
 
 # Cloudera repositories
 RUN curl -s http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key | apt-key add -
