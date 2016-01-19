@@ -65,7 +65,7 @@ author = 'Continuum Analytics'
 # built documents.
 #
 # The short X.Y version.
-import rambling
+import ../../rambling
 version = rambling.__version__
 # The full version, including alpha/beta/rc tags.
 release = version
