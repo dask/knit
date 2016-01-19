@@ -24,11 +24,11 @@ To start a bash session in the running container:
 export CONTAINER_ID=$(docker ps -l -q)
 
 # Start the bash session
-docker exec -it $CONTAINER_ID bash
+docker exec -it $CONTAINER_ID /bin/bash
 ```
 
 
 ```bash
-hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://localhost:8020/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
+hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://localhost:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 ```
 
