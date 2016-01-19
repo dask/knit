@@ -22,3 +22,4 @@ project/plugins/project/
 __pycache__/
 *.py[cod]
 
+*.swp
