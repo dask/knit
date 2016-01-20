@@ -39,13 +39,7 @@ object ClientArguments {
 
   def parseArgs(args: Array[String]) : Config = {
     val parsed = parser.parse(args, Config())
-    var parsedArgs = Config()
-    parsed match {
-      case Some(config) =>
-        parsedArgs = config
-      case None =>
-        //raise
-    }
+    val parsedArgs = parsed.getOrElse( sys.exit(1) )
     parsedArgs
   }
 }
