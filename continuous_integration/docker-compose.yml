@@ -1,11 +1,12 @@
 rambling:
   build: .
+  container_name: rambling_container
   ports:
    - "8020:8020"
    - "50070:50070"
    - "8032:8032"
    - "8088:8088"
   entrypoint: sudo bash /tmp/start.sh
+  working_dir: /rambling
   volumes:
-   - ../../:/rambling
-   - ../rambling_jvm:/rambling_jvm
+   - ../:/rambling

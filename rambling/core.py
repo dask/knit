@@ -113,7 +113,7 @@ class Rambling(object):
 
             logger.debug(out)
             logger.debug(err)
-            return out
+            return str(out)
 
         host_port = "{}:{}".format(self.resourcemanager, self.rm_port)
         url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
