@@ -1,11 +1,12 @@
 rambling
 ========
 
-The ``rambling`` library provides a Python interface around Scala to interact
+The ``rambling`` library provides a Python interface to Scala for interacting
 with the YARN resource manager.
 
 Refer to the following documentation to get started with `rambling`:
 
+* :doc:`source`
 * :doc:`install`
 * :doc:`quickstart`
 
@@ -17,3 +18,4 @@ Refer to the following documentation to get started with `rambling`:
    install
    quickstart
    cli
+   source
