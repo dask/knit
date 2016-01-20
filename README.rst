@@ -1,10 +1,11 @@
 rambling
 ========
 
-+[![Build Status](https://travis-ci.org/blaze/rambling.svg?branch=master)](https://travis-ci.org/blaze/rambling)
+.. image:: https://travis-ci.org/blaze/rambling.svg?branch=master
+    :target: https://travis-ci.org/blaze/rambling
 
-``rambling`` library provides a Python interface to Scala for interacting with
-the YARN resource manager.
+The ``rambling`` library provides a Python interface to Scala for interacting
+with the YARN resource manager.
 
 View the documentation_ for ``rambling``.
 
