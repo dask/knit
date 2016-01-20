@@ -25,7 +25,7 @@ before_install:
       export DOCKER_ENV=/opt/anaconda/envs/py3;
     fi
   - pushd continuous_integration
-  - docker-compose up
+  - docker-compose up -d
   - export CONTAINER_ID="continuousintegration_rambling_1"
   - sleep 80  # Wait for namenode and datanode
 
