@@ -36,6 +36,12 @@ object Client extends Logging {
     logger.info("Staring Application Master")
 
     implicit val conf = new YarnConfiguration()
+    val fs = FileSystem.get(conf)
+    println(fs)
+    println(fs.getUri())
+    println(conf)
+    setDependencies()
+
     val jarPath = parsedArgs.jarPath
     val numberOfInstances = parsedArgs.numInstances
     val CMD = parsedArgs.command
