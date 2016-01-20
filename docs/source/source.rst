@@ -36,11 +36,11 @@ Python
 
 .. code-block:: python
 
-   import rambling
-   r = rambling.Rambling(namenode="ip-XX-XXX-XX", resourcemanager="ip-XX-XXX-XX")
-   cmd = "python -c 'import sys; print(sys.path); import socket; print(socket.gethostname())'"
-   appId = r.start_application(cmd)
-   r.get_application_logs(appId)
+   >>> import rambling
+   >>> r = rambling.Rambling(namenode="ip-XX-XXX-XX", resourcemanager="ip-XX-XXX-XX")
+   >>> cmd = "python -c 'import sys; print(sys.path); import socket; print(socket.gethostname())'"
+   >>> appId = r.start_application(cmd)
+   >>> r.get_application_logs(appId)
 
 Java
 ~~~~
