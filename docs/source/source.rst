@@ -2,7 +2,7 @@ Running from source
 ===================
 
 The following steps can be used to install and run ``rambling`` from source.
-These instructions were tested on Ubuntu 14.04.
+These instructions were tested on Ubuntu 14.04, CDH 5.5.1, and Hadoop 2.6.0.
 
 Update and install system dependencies:
 
