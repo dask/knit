@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/blaze/rambling.svg?branch=master)](https://travis-ci.org/blaze/rambling)
 
 ## Build
 Builds against cdh 5.5.1 hadoop 2.6.0

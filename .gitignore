@@ -16,3 +16,10 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 *.iml
+
+# Python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+*.swp
