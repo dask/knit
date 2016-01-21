@@ -37,6 +37,13 @@ class Rambling(object):
         self.resourcemanager = os.environ.get("RESOURCEMANAGER") or resourcemanager
         self.rm_port = rm_port
 
+        self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
+        self.JAR_FILE_PATH = os.path.join(self.java_lib_dir, JAR_FILE)
+
+        # must set RAMBLING_HOME ENV for YARN App
+        if not os.environ.get('RAMBLING_HOME'):
+            os.environ['RAMBLING_HOME'] = self.java_lib_dir
+
     def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128):
         """
         Method to start a yarn app with a distributed shell
@@ -65,8 +72,7 @@ class Rambling(object):
             A yarn application ID string
         """
 
-        JAR_FILE_PATH = os.path.join(os.path.dirname(__file__), "java_libs", JAR_FILE)
-        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, "--numInstances", str(num_containers),
+        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numInstances", str(num_containers),
                 "--command", cmd, "--virutalCores", str(virtual_cores), "--memory", str(memory)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
