@@ -6,16 +6,9 @@ with the YARN resource manager.
 
 Refer to the following documentation to get started with `knit`:
 
-* :doc:`source`
-* :doc:`install`
-* :doc:`quickstart`
-
-
 .. toctree::
    :maxdepth: 1
-   :hidden:
 
    install
-   quickstart
-   cli
    source
+   api

@@ -13,24 +13,30 @@ JAVA_APP = "io.continuum.knit.Client"
 
 
 class Knit(object):
+    """
+    Connection to HDFS/YARN
+
+    Parameters
+    ----------
+    namenode: str
+        Namenode hostname/ip
+    nm_port: int
+        Namenode Port (default: 9000)
+    resourcemanager: str
+        Resource Manager hostname/ip
+    rm_port: int
+        Resource Manager port (default: 9026)
+    rm_port: int
+        Resource Manager port (default: 9026)
+
+    Examples
+    --------
+
+    >>> k = Knit()
+    >>> app_id = k.start_application('sleep 100', num_containers=5, memory=1024)
+    """
     def __init__(self, namenode="localhost", nm_port=9000,
                  resourcemanager="localhost", rm_port=9026):
-        """
-        Connection to HDFS/YARN
-
-        Parameters
-        ----------
-        namenode: str
-            Namenode hostname/ip
-        nm_port: int
-            Namenode Port (default: 9000)
-        resourcemanager: str
-            Resource Manager hostname/ip
-        rm_port: int
-            Resource Manager port (default: 9026)
-        rm_port: int
-            Resource Manager port (default: 9026)
-        """
         self.namenode = os.environ.get("NAMENODE") or namenode
         self.nm_port = nm_port
 
@@ -91,6 +97,8 @@ class Knit(object):
 
     def get_application_logs(self, app_id, shell=False):
         """
+        Collect logs from each container
+
         Parameters
         ----------
         app_id: str
@@ -163,7 +171,7 @@ class Knit(object):
         return logs
 
     def get_application_status(self, app_id):
-        """
+        """ Get status of an application
 
         Parameters
         ----------
