@@ -1,0 +1,7 @@
+recursive-include knit *.py
+recursive-include docs *.rst
+
+include LICENSE
+include setup.py
+include README.rst
+include MANIFEST.in
