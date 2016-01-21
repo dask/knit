@@ -1,0 +1,17 @@
+package:
+    name: knit
+    version: 0.0.1
+
+source:
+    path: ../..
+
+requirements:
+    build:
+        - python
+    run:
+        - python
+
+about:
+  home: https://github.com/blaze/knit
+  license: BSD
+  summary: Python interface to Scala for interacting with YARN
