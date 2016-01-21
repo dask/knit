@@ -39,9 +39,6 @@ object Client extends Logging {
 
     implicit val conf = new YarnConfiguration()
     val fs = FileSystem.get(conf)
-    println(fs)
-    println(fs.getUri())
-    println(conf)
     setDependencies()
 
 //    val jarPath = parsedArgs.jarPath
@@ -57,10 +54,8 @@ object Client extends Logging {
     val stagingDir = ".ramblingDeps"
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
     val RAMBLING_JAR = new Path(stagingDirPath, "rambling-1.0-SNAPSHOT.jar")
-
-
-    //    val fs = FileSystem.get(conf);
-//    fs.copyFromLocalFile(new Path("/vagrant/rambling-1.0-SNAPSHOT.jar"), new Path("/tmp/rambling-1.0-SNAPSHOT.jar"));
+    val RAMBLING_JAR_PATH = RAMBLING_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
+    println(RAMBLING_JAR_PATH)
 
     // start a yarn client
     val client = YarnClient.createYarnClient()
@@ -73,15 +68,14 @@ object Client extends Logging {
 
     //add the jar which contains the Application master code to classpath
     val appMasterJar = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(RAMBLING_JAR, appMasterJar)
+    setUpLocalResource(RAMBLING_JAR_PATH, appMasterJar)
 
 
-    val hdfsURI = resolveURI(RAMBLING_JAR.toString)
-    println(s"HDFSURI: $hdfsURI")
 
     //TODO: move to .ramblingDeps and allow for users to define zip name and file location
     val appMasterPython = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(new Path("/jars/miniconda-env.zip"),appMasterPython, archived = true)
+    val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+    setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
 
     val localResources = HashMap[String, LocalResource]()
     localResources("PYTHON_DIR") = appMasterPython

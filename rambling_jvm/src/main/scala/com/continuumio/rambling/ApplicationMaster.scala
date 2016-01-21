@@ -4,6 +4,7 @@ import java.util.Collections
 import java.net._
 
 import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records._
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest
@@ -19,10 +20,10 @@ object ApplicationMaster {
 
 
   def main(args: Array[String]) {
-    val n = args(1).toInt
-    val shellCMD = args(2)
-    val vCores = args(3).toInt
-    val mem = args(4).toInt
+    val n = args(0).toInt
+    val shellCMD = args(1)
+    val vCores = args(2).toInt
+    val mem = args(3).toInt
 
     println("Running command in container: " + shellCMD)
     val cmd = List(
@@ -33,6 +34,8 @@ object ApplicationMaster {
     println(cmd)
 
     implicit val conf = new YarnConfiguration()
+    val fs = FileSystem.get(conf)
+
 
     // Create a client to talk to the RM
     val rmClient = AMRMClient.createAMRMClient().asInstanceOf[AMRMClient[ContainerRequest]]
@@ -69,7 +72,8 @@ object ApplicationMaster {
 
       //setup local resources
       val appMasterPython = Records.newRecord(classOf[LocalResource])
-      setUpLocalResource(new Path("/jars/miniconda-env.zip"),appMasterPython, archived = true)
+      val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+      setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
 
       //set up local ENV
       val env = collection.mutable.Map[String,String]()

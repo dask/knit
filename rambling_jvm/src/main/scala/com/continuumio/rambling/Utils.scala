@@ -51,9 +51,9 @@ object Utils {
     val stagingDir = ".ramblingDeps"
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
 
-    // Staging directory is private! -> rwx--------
+    // Staging directory is globally readable for now
     val STAGING_DIR_PERMISSION: FsPermission =
-      FsPermission.createImmutable(Integer.parseInt("700", 8).toShort)
+      FsPermission.createImmutable(Integer.parseInt("777", 8).toShort)
     FileSystem.mkdirs(fs, stagingDirPath, new FsPermission(STAGING_DIR_PERMISSION))
 
     val jarDepPath = Seq(sys.env("RAMBLING_HOME")).mkString(File.separator)
