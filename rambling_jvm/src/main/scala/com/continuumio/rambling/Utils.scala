@@ -49,20 +49,23 @@ object Utils {
   def setDependencies()(implicit conf: YarnConfiguration) = {
     val fs = FileSystem.get(conf)
     val stagingDir = ".ramblingDeps"
-    println(fs.getHomeDirectory())
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
-    println(stagingDirPath)
 
     // Staging directory is private! -> rwx--------
     val STAGING_DIR_PERMISSION: FsPermission =
       FsPermission.createImmutable(Integer.parseInt("700", 8).toShort)
     FileSystem.mkdirs(fs, stagingDirPath, new FsPermission(STAGING_DIR_PERMISSION))
+
     val jarDepPath = Seq(sys.env("RAMBLING_HOME")).mkString(File.separator)
     val RAMBLING_JAR = new File(jarDepPath, "rambling-1.0-SNAPSHOT.jar").getAbsolutePath()
-    println(RAMBLING_JAR)
+    println(s"Attemping upload of $RAMBLING_JAR")
 
-    val RAMBLING_JAR_PATH = getQualifiedLocalPath(Utils.resolveURI(RAMBLING_JAR))
-    copyFileToRemote(stagingDirPath, RAMBLING_JAR_PATH, 1)
+    // upload all files to stagingDir
+    List(RAMBLING_JAR).foreach {
+      case (file) =>
+        val p = getQualifiedLocalPath(Utils.resolveURI(file))
+        copyFileToRemote(stagingDirPath, p, 1)
+    }
   }
 
   def copyFileToRemote(destDir: Path, srcPath: Path,

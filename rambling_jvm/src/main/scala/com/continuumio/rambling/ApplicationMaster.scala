@@ -19,7 +19,6 @@ object ApplicationMaster {
 
 
   def main(args: Array[String]) {
-    val jarPath = args(0)
     val n = args(1).toInt
     val shellCMD = args(2)
     val vCores = args(3).toInt
@@ -70,9 +69,7 @@ object ApplicationMaster {
 
       //setup local resources
       val appMasterPython = Records.newRecord(classOf[LocalResource])
-      val uri = new URI(jarPath)
-      val hdfsURI = jarPath.replace(uri.getPath, "")
-      setUpLocalResource(new Path(hdfsURI + "/jars/miniconda-env.zip"),appMasterPython, archived = true)
+      setUpLocalResource(new Path("/jars/miniconda-env.zip"),appMasterPython, archived = true)
 
       //set up local ENV
       val env = collection.mutable.Map[String,String]()

@@ -1,5 +1,7 @@
 package com.continuumio.rambling
 
+import java.io.File
+
 import com.continuumio.rambling.Utils._
 import com.continuumio.rambling.ClientArguments.parseArgs
 
@@ -42,7 +44,7 @@ object Client extends Logging {
     println(conf)
     setDependencies()
 
-    val jarPath = parsedArgs.jarPath
+//    val jarPath = parsedArgs.jarPath
     val numberOfInstances = parsedArgs.numInstances
     val CMD = parsedArgs.command
     val vCores = parsedArgs.virutalCores
@@ -52,6 +54,10 @@ object Client extends Logging {
     val shellCMD = "\\\""+cleanedCMD+"\\\""
 
     logger.info("Running commmand: " + shellCMD)
+    val stagingDir = ".ramblingDeps"
+    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+    val RAMBLING_JAR = new Path(stagingDirPath, "rambling-1.0-SNAPSHOT.jar")
+
 
     //    val fs = FileSystem.get(conf);
 //    fs.copyFromLocalFile(new Path("/vagrant/rambling-1.0-SNAPSHOT.jar"), new Path("/tmp/rambling-1.0-SNAPSHOT.jar"));
@@ -67,12 +73,15 @@ object Client extends Logging {
 
     //add the jar which contains the Application master code to classpath
     val appMasterJar = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(new Path(jarPath), appMasterJar)
+    setUpLocalResource(RAMBLING_JAR, appMasterJar)
 
-    val uri = new URI(jarPath)
-    val hdfsURI = jarPath.replace(uri.getPath, "")
+
+    val hdfsURI = resolveURI(RAMBLING_JAR.toString)
+    println(s"HDFSURI: $hdfsURI")
+
+    //TODO: move to .ramblingDeps and allow for users to define zip name and file location
     val appMasterPython = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(new Path(hdfsURI + "/jars/miniconda-env.zip"),appMasterPython, archived = true)
+    setUpLocalResource(new Path("/jars/miniconda-env.zip"),appMasterPython, archived = true)
 
     val localResources = HashMap[String, LocalResource]()
     localResources("PYTHON_DIR") = appMasterPython
@@ -96,7 +105,7 @@ object Client extends Logging {
       "$JAVA_HOME/bin/java" +
         " -Xmx256M" +
         " com.continuumio.rambling.ApplicationMaster" +
-        "  "  + jarPath +"   " + numberOfInstances + "  " + shellCMD + " " + vCores + " " + mem + " " +
+        "  " + numberOfInstances + "  " + shellCMD + " " + vCores + " " + mem + " " +
         " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
         " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
     ).asJava)
