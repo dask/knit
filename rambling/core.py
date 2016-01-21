@@ -37,11 +37,6 @@ class Rambling(object):
         self.resourcemanager = os.environ.get("RESOURCEMANAGER") or resourcemanager
         self.rm_port = rm_port
 
-    @property
-    def HDFS_JAR_PATH(self):
-        host_port = "{}:{}".format(self.namenode, self.nm_port)
-        return os.path.join("hdfs://", host_port, "jars", JAR_FILE)
-
     def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128):
         """
         Method to start a yarn app with a distributed shell
@@ -71,9 +66,8 @@ class Rambling(object):
         """
 
         JAR_FILE_PATH = os.path.join(os.path.dirname(__file__), "java_libs", JAR_FILE)
-        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, "--jarPath", self.HDFS_JAR_PATH,
-                "--numInstances", str(num_containers), "--command", cmd, "--virutalCores",
-                str(virtual_cores), "--memory", str(memory)]
+        args = ["hadoop", "jar", JAR_FILE_PATH, JAVA_APP, "--numInstances", str(num_containers),
+                "--command", cmd, "--virutalCores", str(virtual_cores), "--memory", str(memory)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
