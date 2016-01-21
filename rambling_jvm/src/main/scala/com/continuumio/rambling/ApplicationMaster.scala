@@ -71,15 +71,15 @@ object ApplicationMaster {
     while( completedContainers < n) {
 
       //setup local resources
-      val appMasterPython = Records.newRecord(classOf[LocalResource])
-      val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
-      setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
+//      val appMasterPython = Records.newRecord(classOf[LocalResource])
+//      val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+//      setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
 
       //set up local ENV
-      val env = collection.mutable.Map[String,String]()
-      env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
-      env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
-      setUpEnv(env)
+//      val env = collection.mutable.Map[String,String]()
+//      env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
+//      env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
+//      setUpEnv(env)
 
       val response = rmClient.allocate(responseId+1)
       responseId+=1
@@ -95,11 +95,11 @@ object ApplicationMaster {
         )
 
         //setup local resources
-        val localResources = HashMap[String, LocalResource]()
-        localResources("PYTHON_DIR") = appMasterPython
-        localResources("PYTHON_DIR3") = appMasterPython
-        ctx.setLocalResources(localResources.asJava)
-        ctx.setEnvironment(env.asJava)
+//        val localResources = HashMap[String, LocalResource]()
+//        localResources("PYTHON_DIR") = appMasterPython
+//        localResources("PYTHON_DIR3") = appMasterPython
+//        ctx.setLocalResources(localResources.asJava)
+//        ctx.setEnvironment(env.asJava)
 
         System.out.println("Launching container " + container)
         nmClient.startContainer(container, ctx)

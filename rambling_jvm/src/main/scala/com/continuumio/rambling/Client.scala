@@ -73,13 +73,13 @@ object Client extends Logging {
 
 
     //TODO: move to .ramblingDeps and allow for users to define zip name and file location
-    val appMasterPython = Records.newRecord(classOf[LocalResource])
-    val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
-    setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
+//    val appMasterPython = Records.newRecord(classOf[LocalResource])
+//    val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+//    setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
 
     val localResources = HashMap[String, LocalResource]()
-    localResources("PYTHON_DIR") = appMasterPython
-    localResources("PYTHON_DIR3") = appMasterPython
+//    localResources("PYTHON_DIR") = appMasterPython
+//    localResources("PYTHON_DIR3") = appMasterPython
 
     //add the jar which contains the Application master code to classpath
     localResources("rambling.jar") = appMasterJar
