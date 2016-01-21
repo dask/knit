@@ -37,7 +37,6 @@ install:
 script:
   - pwd
   - docker exec -it $CONTAINER_ID sudo -u hdfs /usr/bin/hdfs dfs -mkdir /jars
-  - docker exec -it $CONTAINER_ID sudo -u hdfs /usr/bin/hdfs dfs -put -f /rambling/rambling/java_libs/rambling-1.0-SNAPSHOT.jar /jars
   - docker exec -it $CONTAINER_ID zip -r /rambling/rambling/java_libs/miniconda-env.zip /rambling/rambling/java_libs/rambling-1.0-SNAPSHOT.jar
   - docker exec -it $CONTAINER_ID sudo -u hdfs hdfs dfs -put -f /rambling/rambling/java_libs/miniconda-env.zip /jars/miniconda-env.zip
   - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/py.test /rambling -s -vv
