@@ -1,5 +1,4 @@
-package com.continuumio.rambling
-
+package io.continuum.knit
 import java.io.File
 import scopt._
 
@@ -8,7 +7,7 @@ case class Config(numInstances: Int = 1, memory: Int = 300, virutalCores: Int = 
 
 object ClientArguments {
   val parser = new scopt.OptionParser[Config]("scopt") {
-    head("rambling", "x.1")
+    head("knit", "x.1")
     opt[Int]('n', "numInstances") action { (x, c) =>
       c.copy(numInstances = x)
     } text ("Number of YARN containers")

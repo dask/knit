@@ -3,16 +3,16 @@
 import os
 from setuptools import setup
 
-setup(name='rambling',
+setup(name='knit',
       version='0.0.1',
       description='Python wrapper for YARN Application: distributed shell',
-      url='http://github.com/blaze/rambling/',
+      url='http://github.com/blaze/knit/',
       maintainer='Benjamin Zaitlen',
       maintainer_email='bzaitlen@continuum.io',
       license='MIT',
       keywords='yarn',
-      packages=['rambling'],
-      package_data={'rambling': ['java_libs/rambling-1.0-SNAPSHOT.jar']},
+      packages=['knit'],
+      package_data={'knit': ['java_libs/knit-1.0-SNAPSHOT.jar']},
       install_requires=[],
       long_description=(open('README.rst').read() if os.path.exists('README.rst')
                         else ''),

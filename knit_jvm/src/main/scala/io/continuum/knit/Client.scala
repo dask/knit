@@ -1,9 +1,8 @@
-package com.continuumio.rambling
-
+package io.continuum.knit
 import java.io.File
 
-import com.continuumio.rambling.Utils._
-import com.continuumio.rambling.ClientArguments.parseArgs
+import io.continuum.knit.Utils._
+import io.continuum.knit.ClientArguments.parseArgs
 
 import java.net._
 import java.util.Collections
@@ -51,11 +50,11 @@ object Client extends Logging {
     val shellCMD = "\\\""+cleanedCMD+"\\\""
 
     logger.info("Running commmand: " + shellCMD)
-    val stagingDir = ".ramblingDeps"
+    val stagingDir = ".knitDeps"
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
-    val RAMBLING_JAR = new Path(stagingDirPath, "rambling-1.0-SNAPSHOT.jar")
-    val RAMBLING_JAR_PATH = RAMBLING_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
-    println(RAMBLING_JAR_PATH)
+    val KNIT_JAR = new Path(stagingDirPath, "knit-1.0-SNAPSHOT.jar")
+    val KNIT_JAR_PATH = KNIT_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
+    println(KNIT_JAR_PATH)
 
     // start a yarn client
     val client = YarnClient.createYarnClient()
@@ -68,11 +67,11 @@ object Client extends Logging {
 
     //add the jar which contains the Application master code to classpath
     val appMasterJar = Records.newRecord(classOf[LocalResource])
-    setUpLocalResource(RAMBLING_JAR_PATH, appMasterJar)
+    setUpLocalResource(KNIT_JAR_PATH, appMasterJar)
 
 
 
-    //TODO: move to .ramblingDeps and allow for users to define zip name and file location
+    //TODO: move to .knitDeps and allow for users to define zip name and file location
 //    val appMasterPython = Records.newRecord(classOf[LocalResource])
 //    val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
 //    setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
@@ -82,7 +81,7 @@ object Client extends Logging {
 //    localResources("PYTHON_DIR3") = appMasterPython
 
     //add the jar which contains the Application master code to classpath
-    localResources("rambling.jar") = appMasterJar
+    localResources("knit.jar") = appMasterJar
 
 
     amContainer.setLocalResources(localResources.asJava)
@@ -98,7 +97,7 @@ object Client extends Logging {
     amContainer.setCommands(List(
       "$JAVA_HOME/bin/java" +
         " -Xmx256M" +
-        " com.continuumio.rambling.ApplicationMaster" +
+        " io.continuum.knit.ApplicationMaster" +
         "  " + numberOfInstances + "  " + shellCMD + " " + vCores + " " + mem + " " +
         " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
         " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
@@ -113,7 +112,7 @@ object Client extends Logging {
 
     //context to launch
     val appContext = app.getApplicationSubmissionContext
-    appContext.setApplicationName("rambling")
+    appContext.setApplicationName("knit")
     appContext.setAMContainerSpec(amContainer)
     appContext.setResource(resource)
     appContext.setQueue("default")

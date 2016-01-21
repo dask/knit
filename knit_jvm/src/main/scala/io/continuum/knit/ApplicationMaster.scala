@@ -1,5 +1,4 @@
-package com.continuumio.rambling
-
+package io.continuum.knit
 import java.util.Collections
 import java.net._
 

@@ -26,7 +26,7 @@ before_install:
     fi
   - pushd continuous_integration
   - docker-compose up -d
-  - export CONTAINER_ID="rambling_container"
+  - export CONTAINER_ID="knit_container"
   - sleep 80  # Wait for namenode and datanode
 
 install:
@@ -37,6 +37,6 @@ install:
 script:
   - pwd
   - docker exec -it $CONTAINER_ID sudo -u hdfs /usr/bin/hdfs dfs -mkdir /jars
-  - docker exec -it $CONTAINER_ID zip -r /rambling/rambling/java_libs/miniconda-env.zip /rambling/rambling/java_libs/rambling-1.0-SNAPSHOT.jar
-  - docker exec -it $CONTAINER_ID sudo -u hdfs hdfs dfs -put -f /rambling/rambling/java_libs/miniconda-env.zip /jars/miniconda-env.zip
-  - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/py.test /rambling -s -vv
+  - docker exec -it $CONTAINER_ID zip -r /knit/knit/java_libs/miniconda-env.zip /knit/knit/java_libs/knit-1.0-SNAPSHOT.jar
+  - docker exec -it $CONTAINER_ID sudo -u hdfs hdfs dfs -put -f /knit/knit/java_libs/miniconda-env.zip /jars/miniconda-env.zip
+  - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/py.test /knit -s -vv

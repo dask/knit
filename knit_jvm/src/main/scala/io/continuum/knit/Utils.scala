@@ -1,5 +1,4 @@
-package com.continuumio.rambling
-
+package io.continuum.knit
 import java.io.File
 import java.net.{InetAddress, UnknownHostException, URI, URISyntaxException}
 import com.google.common.base.Objects
@@ -13,10 +12,6 @@ import org.apache.hadoop.yarn.api.records.{LocalResourceVisibility, LocalResourc
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.{Apps, ConverterUtils}
 import scala.collection.JavaConverters._
-
-class NoOp(){
-  val x = 1
-}
 
 object Utils {
 
@@ -48,7 +43,7 @@ object Utils {
 
   def setDependencies()(implicit conf: YarnConfiguration) = {
     val fs = FileSystem.get(conf)
-    val stagingDir = ".ramblingDeps"
+    val stagingDir = ".knitDeps"
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
 
     // Staging directory is globally readable for now
@@ -56,12 +51,12 @@ object Utils {
       FsPermission.createImmutable(Integer.parseInt("777", 8).toShort)
     FileSystem.mkdirs(fs, stagingDirPath, new FsPermission(STAGING_DIR_PERMISSION))
 
-    val jarDepPath = Seq(sys.env("RAMBLING_HOME")).mkString(File.separator)
-    val RAMBLING_JAR = new File(jarDepPath, "rambling-1.0-SNAPSHOT.jar").getAbsolutePath()
-    println(s"Attemping upload of $RAMBLING_JAR")
+    val jarDepPath = Seq(sys.env("KNIT_HOME")).mkString(File.separator)
+    val KNIT_JAR = new File(jarDepPath, "knit-1.0-SNAPSHOT.jar").getAbsolutePath()
+    println(s"Attemping upload of $KNIT_JAR")
 
     // upload all files to stagingDir
-    List(RAMBLING_JAR).foreach {
+    List(KNIT_JAR).foreach {
       case (file) =>
         val p = getQualifiedLocalPath(Utils.resolveURI(file))
         copyFileToRemote(stagingDirPath, p, 1)

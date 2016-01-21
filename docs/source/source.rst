@@ -1,7 +1,7 @@
 Running from source
 ===================
 
-The following steps can be used to install and run ``rambling`` from source.
+The following steps can be used to install and run ``knit`` from source.
 These instructions were tested on Ubuntu 14.04, CDH 5.5.1, and Hadoop 2.6.0.
 
 Update and install system dependencies:
@@ -15,8 +15,8 @@ Clone git repository and build maven project:
 
 .. code-block:: bash
 
-   $ git clone https://github.com/blaze/rambling
-   $ cd rambling/rambling_jvm
+   $ git clone https://github.com/blaze/knit
+   $ cd knit/knit_jvm
    $ mvn clean install
 
 Copy JAR files into HDFS:
@@ -25,7 +25,7 @@ Copy JAR files into HDFS:
 
    $ cd target
    $ hdfs dfs -mkdir /jars
-   $ hdfs dfs -put -f ./rambling-1.0-SNAPSHOT.jar /jars
+   $ hdfs dfs -put -f ./knit-1.0-SNAPSHOT.jar /jars
 
 
 Usage
@@ -36,23 +36,23 @@ Python
 
 .. code-block:: python
 
-   >>> import rambling
-   >>> r = rambling.Rambling(namenode="ip-XX-XXX-XX", resourcemanager="ip-XX-XXX-XX")
+   >>> import knit
+   >>> k = knit.Knit(namenode="ip-XX-XXX-XX", resourcemanager="ip-XX-XXX-XX")
    >>> cmd = "python -c 'import sys; print(sys.path); import socket; print(socket.gethostname())'"
-   >>> appId = r.start_application(cmd)
-   >>> r.get_application_logs(appId)
+   >>> appId = k.start_application(cmd)
+   >>> k.get_application_logs(appId)
 
 Java
 ~~~~
 
 .. code-block:: bash
 
-   $ hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client --help
-   $ hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client --jarPath hdfs://{{NAMENODE}}:9000/jars/rambling-1.0-SNAPSHOT.jar --numInstances 1 --command "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
+   $ hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client --help
+   $ hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client --numInstances 1 --command "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 
 .. code-block:: bash
 
-   $ ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://localhost:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
+   $ ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client hdfs://localhost:9000/jars/knit-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 
 
 Helpful aliases

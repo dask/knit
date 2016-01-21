@@ -8,7 +8,7 @@ Requirements:
 
 Build the container:
 ```bash
-docker build -t rambling .
+docker build -t knit .
 ```
 
 Start the container and wait for the it to be ready:
@@ -29,6 +29,6 @@ docker exec -it $CONTAINER_ID /bin/bash
 
 
 ```bash
-hadoop jar ./rambling-1.0-SNAPSHOT.jar com.continuumio.rambling.Client hdfs://localhost:9000/jars/rambling-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
+hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client hdfs://localhost:9000/jars/knit-1.0-SNAPSHOT.jar 1 "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 ```
 

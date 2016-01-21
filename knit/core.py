@@ -8,11 +8,11 @@ from subprocess import Popen, PIPE
 
 logger = logging.getLogger(__name__)
 
-JAR_FILE = "rambling-1.0-SNAPSHOT.jar"
-JAVA_APP = "com.continuumio.rambling.Client"
+JAR_FILE = "knit-1.0-SNAPSHOT.jar"
+JAVA_APP = "io.continuum.knit.Client"
 
 
-class Rambling(object):
+class Knit(object):
     def __init__(self, namenode="localhost", nm_port=9000,
                  resourcemanager="localhost", rm_port=9026):
         """
@@ -40,9 +40,9 @@ class Rambling(object):
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.JAR_FILE_PATH = os.path.join(self.java_lib_dir, JAR_FILE)
 
-        # must set RAMBLING_HOME ENV for YARN App
-        if not os.environ.get('RAMBLING_HOME'):
-            os.environ['RAMBLING_HOME'] = self.java_lib_dir
+        # must set KNIT_HOME ENV for YARN App
+        if not os.environ.get('KNIT_HOME'):
+            os.environ['KNIT_HOME'] = self.java_lib_dir
 
     def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128):
         """

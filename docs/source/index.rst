@@ -1,10 +1,10 @@
-rambling
+knit
 ========
 
-The ``rambling`` library provides a Python interface to Scala for interacting
+The ``knit`` library provides a Python interface to Scala for interacting
 with the YARN resource manager.
 
-Refer to the following documentation to get started with `rambling`:
+Refer to the following documentation to get started with `knit`:
 
 * :doc:`source`
 * :doc:`install`
