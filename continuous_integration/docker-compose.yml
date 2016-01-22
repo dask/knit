@@ -8,5 +8,6 @@ knit:
    - "8088:8088"
   entrypoint: sudo bash /tmp/start.sh
   working_dir: /knit
+  hostname: inside_docker
   volumes:
    - ../:/knit

@@ -6,6 +6,10 @@ import requests
 import logging
 from subprocess import Popen, PIPE
 
+from .utils import conf_to_dict
+from.compatibility import urlparse
+from .exceptions import HDFSConfigException
+
 logger = logging.getLogger(__name__)
 
 JAR_FILE = "knit-1.0-SNAPSHOT.jar"
@@ -18,16 +22,14 @@ class Knit(object):
 
     Parameters
     ----------
-    namenode: str
+    nn: str
         Namenode hostname/ip
-    nm_port: int
+    nn_port: int
         Namenode Port (default: 9000)
-    resourcemanager: str
-        Resource Manager hostname/ip
+    rm: str
+        Resource Manager hostname
     rm_port: int
-        Resource Manager port (default: 9000)
-    rm_port: int
-        Resource Manager port (default: 9026)
+        Resource Manager port (default: 8088)
 
     Examples
     --------
@@ -35,12 +37,12 @@ class Knit(object):
     >>> k = Knit()
     >>> app_id = k.start_application('sleep 100', num_containers=5, memory=1024)
     """
-    def __init__(self, namenode="localhost", nm_port=9000,
-                 resourcemanager="localhost", rm_port=9026):
-        self.namenode = os.environ.get("NAMENODE") or namenode
-        self.nm_port = nm_port
+    def __init__(self, nn="localhost", nn_port=9000,
+                 rm="localhost", rm_port=8088):
+        self.nn = nn
+        self.nn_port = nn_port
 
-        self.resourcemanager = os.environ.get("RESOURCEMANAGER") or resourcemanager
+        self.rm = rm
         self.rm_port = rm_port
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
@@ -48,13 +50,67 @@ class Knit(object):
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
+        self._hdfs_conf()
+        self._yarn_conf()
 
     @property
     def JAR_FILE_PATH(self):
         return os.path.join(self.KNIT_HOME, JAR_FILE)
 
+    def _yarn_conf(self):
+        """ Load YARN config from default locations. """
+        confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
+                               '') + '/hadoop/conf')
+        afile = 'yarn-site.xml'
+        conf = {}
 
-    def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128, python_env=""):
+        try:
+            conf.update(conf_to_dict(os.sep.join([confd, afile])))
+        except FileNotFoundError:
+            pass
+        if 'yarn.resourcemanager.webapp.address' in conf:
+            u = urlparse(conf['yarn.resourcemanager.webapp.address'])
+            conf['host'] = u.hostname
+            conf['port'] = u.port
+        else:
+            conf['host'] = "localhost"
+            conf['port'] = 8088
+
+        if self.rm != conf['host']:
+            msg = "Possible Resource Manager hostname mismatch.  Detected {}".format(conf['host'])
+            raise HDFSConfigException(msg)
+        if self.rm_port != conf['port']:
+            msg = "Possible Resource Manager port mismatch.  Detected {}".format(conf['host'])
+            raise HDFSConfigException(msg)
+
+        return conf
+
+    def _hdfs_conf(self):
+        """ Load HDFS config from default locations. """
+        confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
+                               '') + '/hadoop/conf')
+        files = 'core-site.xml', 'hdfs-site.xml'
+        conf = {}
+        for afile in files:
+            try:
+                conf.update(conf_to_dict(os.sep.join([confd, afile])))
+            except FileNotFoundError:
+                pass
+        if 'fs.defaultFS' in conf:
+            u = urlparse(conf['fs.defaultFS'])
+            conf['host'] = u.hostname
+            conf['port'] = u.port
+
+        if self.nn != conf['host']:
+            msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
+            raise HDFSConfigException(msg)
+        if self.nn_port != conf['port']:
+            msg = "Possible Namenode port mismatch.  Detected {}".format(conf['host'])
+            raise HDFSConfigException(msg)
+
+        return conf
+
+    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, python_env=""):
         """
         Method to start a yarn app with a distributed shell
 
@@ -88,7 +144,7 @@ class Knit(object):
                 "--command", cmd, "--virtualCores", str(virtual_cores), "--memory", str(memory)]
 
         if python_env:
-            args = args+["--pythonEnv", str(python_env)]
+            args = args + ["--pythonEnv", str(python_env)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
@@ -104,7 +160,7 @@ class Knit(object):
         appId = re.sub('id', '', appId)
         return appId
 
-    def get_application_logs(self, app_id, shell=False):
+    def logs(self, app_id, shell=False):
         """
         Collect logs from each container
 
@@ -132,7 +188,7 @@ class Knit(object):
             logger.debug(err)
             return str(out)
 
-        host_port = "{}:{}".format(self.resourcemanager, self.rm_port)
+        host_port = "{}:{}".format(self.rm, self.rm_port)
         url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
         logger.debug("Getting Resource Manager Info: {}".format(url))
         r = requests.get(url)
@@ -179,7 +235,7 @@ class Knit(object):
 
         return logs
 
-    def get_application_status(self, app_id):
+    def status(self, app_id):
         """ Get status of an application
 
         Parameters
@@ -192,7 +248,7 @@ class Knit(object):
         log: dictionary
             status of application
         """
-        host_port = "{}:{}".format(self.resourcemanager, self.rm_port)
+        host_port = "{}:{}".format(self.rm, self.rm_port)
         url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
         logger.debug("Getting Application Info: {}".format(url))
         r = requests.get(url)
@@ -200,7 +256,7 @@ class Knit(object):
 
         return data
 
-    def kill_application(self, application_id):
+    def kill(self, application_id):
         """
         Method to kill a yarn application
 

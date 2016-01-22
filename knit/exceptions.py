@@ -1,0 +1,2 @@
+class HDFSConfigException(Exception):
+    pass
