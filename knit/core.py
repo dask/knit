@@ -78,7 +78,7 @@ class Knit(object):
             A yarn application ID string
         """
 
-        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numInstances", str(num_containers),
+        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numContainers", str(num_containers),
                 "--command", cmd, "--virutalCores", str(virtual_cores), "--memory", str(memory)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))

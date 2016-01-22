@@ -2,14 +2,14 @@ package io.continuum.knit
 import java.io.File
 import scopt._
 
-case class Config(numInstances: Int = 1, memory: Int = 300, virutalCores: Int = 1,
+case class ClientConfig(numContainers: Int = 1, memory: Int = 300, virtualCores: Int = 1,
                   command: String = "", pythonEnv: String = "", debug: Boolean = false)
 
 object ClientArguments {
-  val parser = new scopt.OptionParser[Config]("scopt") {
+  val parser = new scopt.OptionParser[ClientConfig]("scopt") {
     head("knit", "x.1")
-    opt[Int]('n', "numInstances") action { (x, c) =>
-      c.copy(numInstances = x)
+    opt[Int]('n', "numContainers") action { (x, c) =>
+      c.copy(numContainers = x)
     } text ("Number of YARN containers")
 
     opt[Int]('m', "memory") action { (x, c) =>
@@ -17,7 +17,7 @@ object ClientArguments {
     } text ("Amount of memory per container")
 
     opt[Int]('c', "virtualCores") action { (x, c) =>
-      c.copy(virutalCores = x)
+      c.copy(virtualCores = x)
     } text ("Virtual cores per container")
 
     opt[String]('C', "command") action { (x, c) =>
@@ -36,13 +36,13 @@ object ClientArguments {
 
   }
 
-  def parseArgs(args: Array[String]) : Config = {
-    val parsed = parser.parse(args, Config())
+  def parseArgs(args: Array[String]) : ClientConfig = {
+    val parsed = parser.parse(args, ClientConfig())
     val parsedArgs = parsed.getOrElse( sys.exit(1) )
     parsedArgs
   }
 
-  def ApplicationMasterCMD(config: Config): String = {
+  def ApplicationMasterCMD(config: ClientConfig): String = {
 
     var cmdSeq = Seq.empty[String]
 

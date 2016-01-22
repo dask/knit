@@ -41,15 +41,18 @@ object Client extends Logging {
     setDependencies()
 
     val pythonEnv = parsedArgs.pythonEnv
-    val numberOfInstances = parsedArgs.numInstances
+    val numberOfInstances = parsedArgs.numContainers
     val CMD = parsedArgs.command
-    val vCores = parsedArgs.virutalCores
+    val vCores = parsedArgs.virtualCores
     val mem = parsedArgs.memory
 
     val cleanedCMD = CMD.replace("\"", "\'")
     val shellCMD = "\\\""+cleanedCMD+"\\\""
 
+    val cleanedParsed = parsedArgs.copy(command = shellCMD)
+
     logger.info("Running commmand: " + shellCMD)
+
     val stagingDir = ".knitDeps"
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
     val KNIT_JAR = new Path(stagingDirPath, "knit-1.0-SNAPSHOT.jar")
@@ -93,9 +96,9 @@ object Client extends Logging {
     setUpEnv(env)
     amContainer.setEnvironment(env.asJava)
 
-    val cmdStr = ApplicationMasterCMD(parsedArgs)
+    val cmdStr = ApplicationMasterCMD(cleanedParsed)
     println(s"$cmdStr")
-    sys.exit(1)
+
     //application master is a just java program with given commands
     amContainer.setCommands(List(
       "$JAVA_HOME/bin/java" +

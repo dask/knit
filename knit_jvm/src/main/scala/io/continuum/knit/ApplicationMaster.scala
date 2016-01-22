@@ -28,10 +28,11 @@ object ApplicationMaster {
     println(parsedArgs)
 
     val pythonEnv = parsedArgs.pythonEnv
-    val numberOfInstances = parsedArgs.numInstances
-    val CMD = parsedArgs.command
-    val vCores = parsedArgs.virutalCores
+    val numContainers = parsedArgs.numContainers
+    val shellCMD = parsedArgs.command
+    val vCores = parsedArgs.virtualCores
     val mem = parsedArgs.memory
+
 
 
 
@@ -69,7 +70,7 @@ object ApplicationMaster {
 
 
     //request for containers
-    for ( i <- 1 to n) {
+    for ( i <- 1 to numContainers) {
       val containerAsk = new ContainerRequest(resource,null,null,priority)
       println("asking for " +s"$i")
       rmClient.addContainerRequest(containerAsk)
@@ -78,7 +79,7 @@ object ApplicationMaster {
     var responseId = 0
     var completedContainers = 0
 
-    while( completedContainers < n) {
+    while( completedContainers < numContainers) {
 
       //setup local resources
 //      val appMasterPython = Records.newRecord(classOf[LocalResource])
