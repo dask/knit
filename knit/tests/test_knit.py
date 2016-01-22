@@ -33,18 +33,42 @@ def test_hosntname(k):
         # should pass without incident
         k = Knit(nn="inside_docker")
 
+def test_multiple_containers(k):
+    cmd = "sleep 10"
+    appId = k.start(cmd, num_containers=2)
+
+    status = k.status(appId)
+    import ipdb
+    ipdb.set_trace()
+    while status['app']['state'] != 'RUNNING':
+        status = k.status(appId)
+        time.sleep(2)
+
+    # containers = num_containers + 1 for ApplicationMaster
+    assert status['app']['runningContainers'] == 3
+
+    appId = k.start(cmd, num_containers=2, memory=300)
+    status = k.status(appId)
+    while status['app']['state'] != 'RUNNING':
+        status = k.status(appId)
+        time.sleep(2)
+
+    # not exactly sure how we get this number
+    # 300*2+128(AM)+256 (JAVA PROCESS FOR CLIENT)
+    assert status['app']['allocatedMB'] == 1024
+
 
 def test_cmd(k):
     cmd = "/opt/anaconda/bin/python -c 'import socket; print(socket.gethostname()*2)'"
     appId = k.start(cmd)
 
-    status = k.get_application_status(appId)
+    status = k.status(appId)
     while status['app']['finalStatus'] != 'SUCCEEDED':
-        status = k.get_application_status(appId)
+        status = k.status(appId)
         time.sleep(2)
 
     hostname = socket.gethostname() * 2
-    logs = k.get_application_logs(appId, shell=True)
+    logs = k.logs(appId, shell=True)
     print(logs)
 
     assert hostname in logs
