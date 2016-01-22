@@ -25,6 +25,15 @@ def test_port(k):
         k = Knit(nn_port=8020, rm_port=8088)
 
 
+def test_hosntname(k):
+    with pytest.raises(HDFSConfigException):
+        k = Knit(nn="foobarbiz")
+
+    if socket.gethostname() == "inside_docker":
+        # should pass without incident
+        k = Knit(nn="inside_docker")
+
+
 def test_cmd(k):
     cmd = "/opt/anaconda/bin/python -c 'import socket; print(socket.gethostname()*2)'"
     appId = k.start(cmd)
