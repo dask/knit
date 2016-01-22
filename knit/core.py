@@ -25,7 +25,7 @@ class Knit(object):
     resourcemanager: str
         Resource Manager hostname/ip
     rm_port: int
-        Resource Manager port (default: 9026)
+        Resource Manager port (default: 9000)
     rm_port: int
         Resource Manager port (default: 9026)
 
@@ -44,13 +44,17 @@ class Knit(object):
         self.rm_port = rm_port
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
-        self.JAR_FILE_PATH = os.path.join(self.java_lib_dir, JAR_FILE)
+        self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
 
         # must set KNIT_HOME ENV for YARN App
-        if not os.environ.get('KNIT_HOME'):
-            os.environ['KNIT_HOME'] = self.java_lib_dir
+        os.environ['KNIT_HOME'] = self.KNIT_HOME
 
-    def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128):
+    @property
+    def JAR_FILE_PATH(self):
+        return os.path.join(self.KNIT_HOME, JAR_FILE)
+
+
+    def start_application(self, cmd, num_containers=1, virtual_cores=1, memory=128, python_env=""):
         """
         Method to start a yarn app with a distributed shell
 
@@ -71,6 +75,8 @@ class Knit(object):
         memory: int
             Memory per container (default: 128)
             * The unit for memory is megabytes.
+        python_env: string
+            Full Path to zipped Python environment
 
         Returns
         -------
@@ -79,7 +85,10 @@ class Knit(object):
         """
 
         args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numContainers", str(num_containers),
-                "--command", cmd, "--virutalCores", str(virtual_cores), "--memory", str(memory)]
+                "--command", cmd, "--virtualCores", str(virtual_cores), "--memory", str(memory)]
+
+        if python_env:
+            args = args+["--pythonEnv", str(python_env)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)

@@ -46,6 +46,8 @@ object Client extends Logging {
     val vCores = parsedArgs.virtualCores
     val mem = parsedArgs.memory
 
+    //TODO: Better processing of $ in CLI args
+    //Expected only to be used with `python_env`
     val cleanedCMD = CMD.replace("\"", "\'")
     val shellCMD = "\\\""+cleanedCMD+"\\\""
 
@@ -74,14 +76,15 @@ object Client extends Logging {
 
 
 
-    //TODO: move to .knitDeps and allow for users to define zip name and file location
-//    val appMasterPython = Records.newRecord(classOf[LocalResource])
-//    val PYTHON_ZIP = new Path("/jars/miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
-//    setUpLocalResource(PYTHON_ZIP,appMasterPython, archived = true)
-
     val localResources = HashMap[String, LocalResource]()
-//    localResources("PYTHON_DIR") = appMasterPython
-//    localResources("PYTHON_DIR3") = appMasterPython
+    if (!pythonEnv.isEmpty) {
+      //TODO: detect file suffix
+      uploadFile(pythonEnv)
+      val appMasterPython = Records.newRecord(classOf[LocalResource])
+      val PYTHON_ZIP = new Path(stagingDirPath, "miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+      setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
+      localResources("PYTHON_DIR") = appMasterPython
+    }
 
     //add the jar which contains the Application master code to classpath
     localResources("knit.jar") = appMasterJar

@@ -63,6 +63,22 @@ object Utils {
     }
   }
 
+  def uploadFile(filePath: String)(implicit conf: YarnConfiguration) = {
+    val fs = FileSystem.get(conf)
+    val stagingDir = ".knitDeps"
+    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+
+    val FILE_PATH = new File(filePath).getAbsolutePath()
+    println(s"Attemping upload of $FILE_PATH")
+
+    // upload all files to stagingDir
+    List(FILE_PATH).foreach {
+      case (file) =>
+        val p = getQualifiedLocalPath(Utils.resolveURI(file))
+        copyFileToRemote(stagingDirPath, p, 1)
+    }
+  }
+
   def copyFileToRemote(destDir: Path, srcPath: Path,
                        replication: Short)(implicit conf: Configuration): Unit = {
 
