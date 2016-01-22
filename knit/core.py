@@ -100,6 +100,10 @@ class Knit(object):
             u = urlparse(conf['fs.defaultFS'])
             conf['host'] = u.hostname
             conf['port'] = u.port
+        else:
+            conf['host'] = "localhost"
+            conf['port'] = 9000
+
 
         if self.nn != conf['host']:
             msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])

@@ -38,8 +38,7 @@ def test_multiple_containers(k):
     appId = k.start(cmd, num_containers=2)
 
     status = k.status(appId)
-    import ipdb
-    ipdb.set_trace()
+    
     while status['app']['state'] != 'RUNNING':
         status = k.status(appId)
         time.sleep(2)
