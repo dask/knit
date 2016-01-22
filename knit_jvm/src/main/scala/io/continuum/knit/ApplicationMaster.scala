@@ -1,4 +1,6 @@
 package io.continuum.knit
+
+import java.io.File
 import java.util.Collections
 import java.net._
 
@@ -10,7 +12,10 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest
 import org.apache.hadoop.yarn.client.api.{AMRMClient, NMClient}
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.Records
-import Utils._
+
+import io.continuum.knit.Utils._
+import io.continuum.knit.ApplicationMasterArguments.{parseArgs}
+
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
@@ -19,10 +24,16 @@ object ApplicationMaster {
 
 
   def main(args: Array[String]) {
-    val n = args(0).toInt
-    val shellCMD = args(1)
-    val vCores = args(2).toInt
-    val mem = args(3).toInt
+    val parsedArgs = parseArgs(args)
+    println(parsedArgs)
+
+    val pythonEnv = parsedArgs.pythonEnv
+    val numberOfInstances = parsedArgs.numInstances
+    val CMD = parsedArgs.command
+    val vCores = parsedArgs.virutalCores
+    val mem = parsedArgs.memory
+
+
 
     println("Running command in container: " + shellCMD)
     val cmd = List(
@@ -116,5 +127,7 @@ object ApplicationMaster {
     rmClient.unregisterApplicationMaster(
       FinalApplicationStatus.SUCCEEDED, "", "")
   }
+
+
 
 }

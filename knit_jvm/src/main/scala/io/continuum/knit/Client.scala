@@ -2,7 +2,7 @@ package io.continuum.knit
 import java.io.File
 
 import io.continuum.knit.Utils._
-import io.continuum.knit.ClientArguments.parseArgs
+import io.continuum.knit.ClientArguments.{parseArgs, ApplicationMasterCMD}
 
 import java.net._
 import java.util.Collections
@@ -40,7 +40,7 @@ object Client extends Logging {
     val fs = FileSystem.get(conf)
     setDependencies()
 
-//    val jarPath = parsedArgs.jarPath
+    val pythonEnv = parsedArgs.pythonEnv
     val numberOfInstances = parsedArgs.numInstances
     val CMD = parsedArgs.command
     val vCores = parsedArgs.virutalCores
@@ -93,12 +93,15 @@ object Client extends Logging {
     setUpEnv(env)
     amContainer.setEnvironment(env.asJava)
 
+    val cmdStr = ApplicationMasterCMD(parsedArgs)
+    println(s"$cmdStr")
+    sys.exit(1)
     //application master is a just java program with given commands
     amContainer.setCommands(List(
       "$JAVA_HOME/bin/java" +
         " -Xmx256M" +
         " io.continuum.knit.ApplicationMaster" +
-        "  " + numberOfInstances + "  " + shellCMD + " " + vCores + " " + mem + " " +
+        "  " + cmdStr + " " +
         " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
         " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
     ).asJava)
@@ -123,5 +126,4 @@ object Client extends Logging {
     client.submitApplication(appContext)
 
   }
-
 }
