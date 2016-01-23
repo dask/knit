@@ -7,7 +7,7 @@ import logging
 from subprocess import Popen, PIPE
 
 from .utils import conf_to_dict
-from.compatibility import urlparse
+from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
 
 logger = logging.getLogger(__name__)
