@@ -40,10 +40,10 @@ class Knit(object):
     def __init__(self, nn="localhost", nn_port=9000,
                  rm="localhost", rm_port=8088):
         self.nn = nn
-        self.nn_port = nn_port
+        self.nn_port = str(nn_port)
 
         self.rm = rm
-        self.rm_port = rm_port
+        self.rm_port = str(rm_port)
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
@@ -69,18 +69,24 @@ class Knit(object):
         except FileNotFoundError:
             pass
         if 'yarn.resourcemanager.webapp.address' in conf:
-            u = urlparse(conf['yarn.resourcemanager.webapp.address'])
-            conf['host'] = u.hostname
-            conf['port'] = u.port
+            url = conf['yarn.resourcemanager.webapp.address']
+            u = urlparse(url)
+
+            # handle host:port with no :// preabmle
+            if u.path == url:
+                conf['host'], conf['port'] = url.split(':')
+            else:
+                conf['host'] = u.hostname
+                conf['port'] = u.port
         else:
             conf['host'] = "localhost"
-            conf['port'] = 8088
+            conf['port'] = "8088"
 
         if self.rm != conf['host']:
             msg = "Possible Resource Manager hostname mismatch.  Detected {}".format(conf['host'])
             raise HDFSConfigException(msg)
         if self.rm_port != conf['port']:
-            msg = "Possible Resource Manager port mismatch.  Detected {}".format(conf['host'])
+            msg = "Possible Resource Manager port mismatch.  Detected {}".format(conf['port'])
             raise HDFSConfigException(msg)
 
         return conf
@@ -102,14 +108,14 @@ class Knit(object):
             conf['port'] = u.port
         else:
             conf['host'] = "localhost"
-            conf['port'] = 9000
+            conf['port'] = "9000"
 
 
         if self.nn != conf['host']:
             msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
             raise HDFSConfigException(msg)
-        if self.nn_port != conf['port']:
-            msg = "Possible Namenode port mismatch.  Detected {}".format(conf['host'])
+        if self.nn_port != str(conf['port']):
+            msg = "Possible Namenode port mismatch.  Detected {}".format(conf['port'])
             raise HDFSConfigException(msg)
 
         return conf

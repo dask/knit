@@ -66,6 +66,7 @@ object ApplicationMaster {
 
     //resources needed by each container
     val resource = Records.newRecord(classOf[Resource])
+    println(s"Request: $mem MB of RAM and $vCores number of coress ")
     resource.setMemory(mem)
     resource.setVirtualCores(vCores)
 

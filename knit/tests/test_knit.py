@@ -25,43 +25,13 @@ def test_port(k):
         k = Knit(nn_port=8020, rm_port=8088)
 
 
-def test_hosntname(k):
+def test_hotname(k):
     with pytest.raises(HDFSConfigException):
         k = Knit(nn="foobarbiz")
 
     if socket.gethostname() == "inside_docker":
         # should pass without incident
         k = Knit(nn="inside_docker")
-
-def test_multiple_containers(k):
-    cmd = "sleep 10"
-    appId = k.start(cmd, num_containers=2)
-
-    status = k.status(appId)
-
-    while status['app']['state'] != 'RUNNING':
-        status = k.status(appId)
-        time.sleep(2)
-
-    #wait for job to finsih
-    status = k.status(appId)
-    while status['app']['finalStatus'] != 'SUCCEEDED':
-        status = k.status(appId)
-        time.sleep(2)
-
-
-    # containers = num_containers + 1 for ApplicationMaster
-    assert status['app']['runningContainers'] == 3
-
-    appId = k.start(cmd, num_containers=2, memory=300)
-    status = k.status(appId)
-    while status['app']['state'] != 'RUNNING':
-        status = k.status(appId)
-        time.sleep(2)
-
-    # not exactly sure how we get this number
-    # 300*2+128(AM)+256 (JAVA PROCESS FOR CLIENT)
-    assert status['app']['allocatedMB'] == 1024
 
 
 def test_cmd(k):
@@ -78,3 +48,58 @@ def test_cmd(k):
     print(logs)
 
     assert hostname in logs
+
+
+def test_multiple_containers(k):
+    cmd = "sleep 10"
+    appId = k.start(cmd, num_containers=2)
+
+    status = k.status(appId)
+    while status['app']['state'] != 'RUNNING':
+        status = k.status(appId)
+        time.sleep(2)
+
+    time.sleep(2)
+    status = k.status(appId)
+    # containers = num_containers + 1 for ApplicationMaster
+    assert status['app']['runningContainers'] == 3
+
+    # wait for job to finsih
+    status = k.status(appId)
+    while status['app']['finalStatus'] != 'SUCCEEDED':
+        status = k.status(appId)
+        time.sleep(2)
+
+
+def test_memory(k):
+    cmd = "sleep 10"
+    appId = k.start(cmd, num_containers=2, memory=300)
+    status = k.status(appId)
+    while status['app']['state'] != 'RUNNING':
+        status = k.status(appId)
+        time.sleep(2)
+
+    time.sleep(2)
+    status = k.status(appId)
+
+    # not exactly sure on getting an exact number
+    # 300*2+128(AM)
+    assert status['app']['allocatedMB'] >= 728
+
+
+def test_vcores(k):
+    cmd = "sleep 10"
+    appId = k.start(cmd, num_containers=1, memory=300, virtual_cores=2)
+
+    time.sleep(2)
+    status = k.status(appId)
+
+    while status['app']['state'] != 'RUNNING':
+        status = k.status(appId)
+        time.sleep(2)
+
+    time.sleep(2)
+    status = k.status(appId)
+
+    assert status['app']['allocatedVCores'] == 3
+
