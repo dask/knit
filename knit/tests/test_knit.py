@@ -38,10 +38,17 @@ def test_multiple_containers(k):
     appId = k.start(cmd, num_containers=2)
 
     status = k.status(appId)
-    
+
     while status['app']['state'] != 'RUNNING':
         status = k.status(appId)
         time.sleep(2)
+
+    #wait for job to finsih
+    status = k.status(appId)
+    while status['app']['finalStatus'] != 'SUCCEEDED':
+        status = k.status(appId)
+        time.sleep(2)
+
 
     # containers = num_containers + 1 for ApplicationMaster
     assert status['app']['runningContainers'] == 3
