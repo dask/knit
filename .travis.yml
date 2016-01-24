@@ -36,7 +36,4 @@ install:
 
 script:
   - pwd
-  - docker exec -it $CONTAINER_ID sudo -u hdfs /usr/bin/hdfs dfs -mkdir /jars
-  - docker exec -it $CONTAINER_ID zip -r /knit/knit/java_libs/miniconda-env.zip /knit/knit/java_libs/knit-1.0-SNAPSHOT.jar
-  - docker exec -it $CONTAINER_ID sudo -u hdfs hdfs dfs -put -f /knit/knit/java_libs/miniconda-env.zip /jars/miniconda-env.zip
   - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/py.test /knit -s -vv

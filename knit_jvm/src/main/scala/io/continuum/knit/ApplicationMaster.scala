@@ -70,13 +70,20 @@ object ApplicationMaster {
     resource.setMemory(mem)
     resource.setVirtualCores(vCores)
 
-
     //request for containers
     for ( i <- 1 to numContainers) {
       val containerAsk = new ContainerRequest(resource,null,null,priority)
-      println("asking for " +s"$i")
+      println(s"Requesting Container: $i with Resources: $resource")
+      println(s"Requested container ask: $containerAsk")
       rmClient.addContainerRequest(containerAsk)
     }
+    //    val maxMem = rmClient.getAvailableResources.getMemory()
+    //    val maxCores = rmClient.getAvailableResources.getVirtualCores()
+    //    val maxNodes = rmClient.getClusterNodeCount()
+    //
+    //    println(s"Max memory: $maxMem, Max vCores: $maxCores, Max nodes: $maxNodes")
+    //    println(rmClient.getConfig())
+
 
     var responseId = 0
     var completedContainers = 0
@@ -129,7 +136,7 @@ object ApplicationMaster {
 
       }
 
-      Thread.sleep(10000)
+      Thread.sleep(1000)
     }
 
     rmClient.unregisterApplicationMaster(

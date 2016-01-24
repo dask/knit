@@ -14,7 +14,7 @@ import versioneer
 if not 'nojava' in sys.argv:
     JAVA_SRC = "knit_jvm"
     os.chdir(JAVA_SRC)
-    build_cmd = "mvn clean install"
+    build_cmd = "mvn clean install -q"
     os.system(build_cmd)
     os.chdir("..")
     jar_file = os.path.join(JAVA_SRC,"target", "knit-1.0-SNAPSHOT.jar")

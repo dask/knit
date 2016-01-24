@@ -41,6 +41,7 @@ def test_cmd(k):
     status = k.status(appId)
     while status['app']['finalStatus'] != 'SUCCEEDED':
         status = k.status(appId)
+        print(status['app']['finalStatus'])
         time.sleep(2)
 
     hostname = socket.gethostname() * 2
@@ -86,6 +87,11 @@ def test_memory(k):
     # 300*2+128(AM)
     assert status['app']['allocatedMB'] >= 728
 
+    # wait for job to finsih
+    status = k.status(appId)
+    while status['app']['finalStatus'] != 'SUCCEEDED':
+        status = k.status(appId)
+        time.sleep(2)
 
 def test_vcores(k):
     cmd = "sleep 10"
@@ -100,6 +106,7 @@ def test_vcores(k):
 
     time.sleep(2)
     status = k.status(appId)
-
+    import ipdb
+    ipdb.set_trace()
     assert status['app']['allocatedVCores'] == 3
 
