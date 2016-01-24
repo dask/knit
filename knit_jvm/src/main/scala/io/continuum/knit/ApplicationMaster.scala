@@ -53,8 +53,12 @@ object ApplicationMaster {
     val rmClient = AMRMClient.createAMRMClient().asInstanceOf[AMRMClient[ContainerRequest]]
     rmClient.init(conf)
     rmClient.start()
-    rmClient.registerApplicationMaster("", 0, "")
+    val amRMResponse = rmClient.registerApplicationMaster("", 0, "")
 
+    val maxMem = amRMResponse.getMaximumResourceCapability.getMemory
+    val maxCores = amRMResponse.getMaximumResourceCapability.getVirtualCores
+
+    println(s"Max memory: $maxMem, Max vCores: $maxCores")
 
     //create a client to talk to NM
     val nmClient = NMClient.createNMClient()
@@ -77,13 +81,6 @@ object ApplicationMaster {
       println(s"Requested container ask: $containerAsk")
       rmClient.addContainerRequest(containerAsk)
     }
-    //    val maxMem = rmClient.getAvailableResources.getMemory()
-    //    val maxCores = rmClient.getAvailableResources.getVirtualCores()
-    //    val maxNodes = rmClient.getClusterNodeCount()
-    //
-    //    println(s"Max memory: $maxMem, Max vCores: $maxCores, Max nodes: $maxNodes")
-    //    println(rmClient.getConfig())
-
 
     var responseId = 0
     var completedContainers = 0
@@ -110,7 +107,7 @@ object ApplicationMaster {
 
       setUpEnv(env)
 
-      val response = rmClient.allocate(responseId+1)
+      val response = rmClient.allocate(0.1f)
       responseId+=1
       for (container <- response.getAllocatedContainers.asScala) {
         val ctx =
