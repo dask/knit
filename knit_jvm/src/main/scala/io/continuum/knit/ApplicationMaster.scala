@@ -12,6 +12,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest
 import org.apache.hadoop.yarn.client.api.{AMRMClient, NMClient}
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.Records
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException
 
 import io.continuum.knit.Utils._
 import io.continuum.knit.ApplicationMasterArguments.{parseArgs}
@@ -84,60 +85,71 @@ object ApplicationMaster {
 
     var responseId = 0
     var completedContainers = 0
+    try {
+      while (completedContainers < numContainers) {
 
-    while( completedContainers < numContainers) {
-
-      val localResources = HashMap[String, LocalResource]()
-      val env = collection.mutable.Map[String,String]()
+        val localResources = HashMap[String, LocalResource]()
+        val env = collection.mutable.Map[String, String]()
 
 
-      //setup local resources
-      if (!pythonEnv.isEmpty) {
-        val appMasterPython = Records.newRecord(classOf[LocalResource])
-        val PYTHON_ZIP = new Path(stagingDirPath, "miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
-        setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
-        // set up local ENV
-        env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
-        env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
+        //setup local resources
+        if (!pythonEnv.isEmpty) {
+          val appMasterPython = Records.newRecord(classOf[LocalResource])
+          val PYTHON_ZIP = new Path(stagingDirPath, "miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+          setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
+          // set up local ENV
+          env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
+          env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
 
-        localResources("PYTHON_DIR") = appMasterPython
-        localResources("PYTHON_DIR3") = appMasterPython
+          localResources("PYTHON_DIR") = appMasterPython
+          localResources("PYTHON_DIR3") = appMasterPython
 
+        }
+
+        setUpEnv(env)
+
+        val response = rmClient.allocate(0.1f)
+        responseId += 1
+        for (container <- response.getAllocatedContainers.asScala) {
+          val ctx =
+            Records.newRecord(classOf[ContainerLaunchContext])
+          ctx.setCommands(
+            List(
+              shellCMD +
+                " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+                " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
+            ).asJava
+          )
+
+          ctx.setLocalResources(localResources.asJava)
+          ctx.setEnvironment(env.asJava)
+
+          System.out.println("Launching container " + container)
+          try {
+            nmClient.startContainer(container, ctx)
+          } catch {
+            case e: Exception => println(s"Exception $e")
+          }
+        }
+
+        for (status <- response.getCompletedContainersStatuses.asScala) {
+          println("completed" + status.getContainerId)
+          completedContainers += 1
+
+        }
+
+        Thread.sleep(1000)
       }
-
-      setUpEnv(env)
-
-      val response = rmClient.allocate(0.1f)
-      responseId+=1
-      for (container <- response.getAllocatedContainers.asScala) {
-        val ctx =
-          Records.newRecord(classOf[ContainerLaunchContext])
-        ctx.setCommands(
-          List(
-            shellCMD +
-              " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
-              " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
-          ).asJava
-        )
-
-        ctx.setLocalResources(localResources.asJava)
-        ctx.setEnvironment(env.asJava)
-
-        System.out.println("Launching container " + container)
-        nmClient.startContainer(container, ctx)
-      }
-
-      for ( status <- response.getCompletedContainersStatuses.asScala){
-        println("completed"+status.getContainerId)
-        completedContainers+=1
-
-      }
-
-      Thread.sleep(1000)
+    } catch {
+      case e: org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException =>
+        println(s"Yarn Application is possibly being killed: $e")
     }
+
 
     rmClient.unregisterApplicationMaster(
       FinalApplicationStatus.SUCCEEDED, "", "")
+    rmClient.stop()
+
   }
 
 
