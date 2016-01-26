@@ -2,7 +2,7 @@
 # Docs: http://www.cloudera.com/content/www/en-us/documentation/enterprise/latest/topics/cdh_qs_yarn_pseudo.html
 
 apt-get update && apt-get install -y -q openjdk-7-jre-headless hadoop-conf-pseudo openjdk-7-jdk
-apt-get install hadoop-yarn-proxyserver
+apt-get install hadoop-yarn-proxyserver -y -q
 
 # Step 1: Format the NameNode
 sudo -u hdfs hdfs namenode -format -force
