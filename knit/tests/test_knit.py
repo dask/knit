@@ -93,20 +93,21 @@ def test_memory(k):
         status = k.status(appId)
         time.sleep(2)
 
-def test_vcores(k):
-    cmd = "sleep 10"
-    appId = k.start(cmd, num_containers=1, memory=300, virtual_cores=2)
 
-    time.sleep(2)
-    status = k.status(appId)
-
-    while status['app']['state'] != 'RUNNING':
-        status = k.status(appId)
-        time.sleep(2)
-
-    time.sleep(2)
-    status = k.status(appId)
-    import ipdb
-    ipdb.set_trace()
-    assert status['app']['allocatedVCores'] == 3
-
+## temporarily removing test until vCore handling is better resolved in the core
+# def test_vcores(k):
+#     cmd = "sleep 10"
+#     appId = k.start(cmd, num_containers=1, memory=300, virtual_cores=2)
+#
+#     time.sleep(2)
+#     status = k.status(appId)
+#
+#     while status['app']['state'] != 'RUNNING':
+#         status = k.status(appId)
+#         time.sleep(2)
+#
+#     time.sleep(2)
+#     status = k.status(appId)
+#
+#     assert status['app']['allocatedVCores'] == 3
+#
