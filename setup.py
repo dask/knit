@@ -12,6 +12,11 @@ import versioneer
 #------------------------------------------------------------------------
 
 if not 'nojava' in sys.argv:
+    #JAVA_HOME necessary for building
+    if os.environ.get("JAVA_HOME"):
+        print("PLEASE SET JAVA_HOME")
+        sys.exit(1)
+
     JAVA_SRC = "knit_jvm"
     os.chdir(JAVA_SRC)
     build_cmd = "mvn clean install -q"
