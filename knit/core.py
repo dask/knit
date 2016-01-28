@@ -24,12 +24,16 @@ class Knit(object):
     ----------
     nn: str
         Namenode hostname/ip
+    nn: str
+        Namenode hostname/ip
     nn_port: int
         Namenode Port (default: 9000)
     rm: str
         Resource Manager hostname
     rm_port: int
         Resource Manager port (default: 8088)
+    autodetect: bool
+        Autodetect NN/RM IP/Ports
 
     Examples
     --------
@@ -38,7 +42,12 @@ class Knit(object):
     >>> app_id = k.start_application('sleep 100', num_containers=5, memory=1024)
     """
     def __init__(self, nn="localhost", nn_port=9000,
-                 rm="localhost", rm_port=8088):
+                 rm="localhost", rm_port=8088, autodetect=False):
+
+        if autodetect:
+             self.nn,  self.nn_port = self._yarn_conf(autodetect)
+             self.rm,  self.rm_port = self._hdfs_conf(autodetect)
+
         self.nn = nn
         self.nn_port = str(nn_port)
 
@@ -57,8 +66,18 @@ class Knit(object):
     def JAR_FILE_PATH(self):
         return os.path.join(self.KNIT_HOME, JAR_FILE)
 
-    def _yarn_conf(self):
-        """ Load YARN config from default locations. """
+    def _yarn_conf(self, autodetect=False):
+        """
+        Load YARN config from default locations.
+        Parameters
+        ----------
+        autodetect: bool
+
+        Returns
+        -------
+            tuple (ip, port)
+
+        """
         confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
                                '') + '/hadoop/conf')
         afile = 'yarn-site.xml'
@@ -82,6 +101,9 @@ class Knit(object):
             conf['host'] = "localhost"
             conf['port'] = "8088"
 
+        if autodetect:
+            return (conf['host'], conf['port'])
+
         if self.rm != conf['host']:
             msg = "Possible Resource Manager hostname mismatch.  Detected {}".format(conf['host'])
             raise HDFSConfigException(msg)
@@ -91,8 +113,18 @@ class Knit(object):
 
         return conf
 
-    def _hdfs_conf(self):
-        """ Load HDFS config from default locations. """
+    def _hdfs_conf(self, autodetect=False):
+        """"
+        Parameters
+        ----------
+        autodetect: bool
+
+        Returns
+        -------
+            tuple (ip, port)
+
+        """
+
         confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
                                '') + '/hadoop/conf')
         files = 'core-site.xml', 'hdfs-site.xml'
@@ -110,6 +142,8 @@ class Knit(object):
             conf['host'] = "localhost"
             conf['port'] = "9000"
 
+        if autodetect:
+            return (conf['host'], conf['port'])
 
         if self.nn != conf['host']:
             msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
