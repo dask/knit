@@ -157,29 +157,30 @@ class CondaCreator(object):
             path to zipped conda environment
         """
         env_path = self._create_env(env_name, packages, remove)
-        return zip_env(env_path)
+        return self.zip_env(env_path)
 
+    def zip_env(self, env_path):
+        """
+        Zip env directory
 
-def zip_env(env_path):
-    """
-    Zip env directory
+        Parameters
+        ----------
+        env_path : string
 
-    Parameters
-    ----------
-    env_path : string
+        Returns
+        -------
+        path : string
+            path to zipped file
+        """
 
-    Returns
-    -------
-    path : string
-        path to zipped file
-    """
+        fname = os.path.basename(env_path)+'.zip'
+        env_dir = os.path.dirname(env_path)
+        zFile = os.path.join(env_dir, fname)
 
-    fname = os.path.basename(env_path)+'.zip'
-    env_dir = os.path.dirname(env_path)
-    zFile = os.path.join(env_dir, fname)
-
-    with zipfile.ZipFile(zFile, 'w') as f:
-        for root, dirs, files in os.walk(env_path):
-            for file in files:
-                f.write(os.path.join(root, file))
-    return zFile
+        with zipfile.ZipFile(zFile, 'w') as f:
+            for root, dirs, files in os.walk(env_path):
+                for file in files:
+                    relfile = os.path.join(os.path.relpath(root, self.conda_envs), file)
+                    absfile =os.path.join(root, file)
+                    f.write(absfile, relfile)
+        return zFile

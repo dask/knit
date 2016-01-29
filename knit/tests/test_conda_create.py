@@ -43,3 +43,6 @@ def test_full_create(c):
     assert os.path.getsize(env_zip) > 500000 # ensures zipfile has non-0 size
     assert zipfile.is_zipfile(env_zip)
 
+    with zipfile.ZipFile(env_zip, 'r') as f:
+        assert f.getinfo('test_env/bin/python')
+
