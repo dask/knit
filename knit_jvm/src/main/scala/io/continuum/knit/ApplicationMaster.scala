@@ -95,15 +95,16 @@ object ApplicationMaster {
         //setup local resources
         if (!pythonEnv.isEmpty) {
           val appMasterPython = Records.newRecord(classOf[LocalResource])
-          val PYTHON_ZIP = new Path(stagingDirPath, "miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+          val envFile = new java.io.File(pythonEnv)
+          val envZip = envFile.getName
+          val envName = envZip.split('.').init(0)
+          val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
           setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
           // set up local ENV
           env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
           env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
 
           localResources("PYTHON_DIR") = appMasterPython
-          localResources("PYTHON_DIR3") = appMasterPython
-
         }
 
         setUpEnv(env)

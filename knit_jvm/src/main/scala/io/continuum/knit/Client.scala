@@ -77,13 +77,21 @@ object Client extends Logging {
 
 
     val localResources = HashMap[String, LocalResource]()
+    //setup env to get all yarn and hadoop classes in classpath
+    val env = collection.mutable.Map[String, String]()
+
     if (!pythonEnv.isEmpty) {
       //TODO: detect file suffix
       uploadFile(pythonEnv)
+      val envFile = new java.io.File(pythonEnv)
+      val envZip = envFile.getName
+      val envName = envZip.split('.').init(0)
       val appMasterPython = Records.newRecord(classOf[LocalResource])
-      val PYTHON_ZIP = new Path(stagingDirPath, "miniconda-env.zip").makeQualified(fs.getUri, fs.getWorkingDirectory)
+      val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
       setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
       localResources("PYTHON_DIR") = appMasterPython
+      env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
+      env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
     }
 
     //add the jar which contains the Application master code to classpath
@@ -92,10 +100,6 @@ object Client extends Logging {
 
     amContainer.setLocalResources(localResources.asJava)
 
-    //setup env to get all yarn and hadoop classes in classpath
-    val env = collection.mutable.Map[String, String]()
-    env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
-    env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
     setUpEnv(env)
     amContainer.setEnvironment(env.asJava)
 

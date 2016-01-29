@@ -101,6 +101,21 @@ def test_memory(k):
         time.sleep(2)
 
 
+def test_cmd_w_conda_env(k):
+    env_zip = k.create_env(env_name='dev', packages=['python=2.6'], remove=True)
+    cmd = '$PYTHON_BIN -c "import sys; print(sys.path); import random; print(str(random.random()))"'
+    appId = k.start(cmd, env=env_zip)
+
+    status = k.status(appId)
+    while status['app']['finalStatus'] != 'SUCCEEDED':
+        status = k.status(appId)
+        print(status['app']['finalStatus'])
+        time.sleep(2)
+
+    logs = k.logs(appId, shell=True)
+    assert 'dev/lib/python35.zip' in logs
+
+
 ## temporarily removing test until vCore handling is better resolved in the core
 # def test_vcores(k):
 #     cmd = "sleep 10"
