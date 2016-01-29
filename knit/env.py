@@ -2,9 +2,14 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import shutil
 import requests
 import logging
-from subprocess import check_call
+import zipfile
+from subprocess import Popen, PIPE
+
+from .exceptions import CondaException
+
 mini_file = "Miniconda-latest.sh"
 
 linux_miniconda_url = "https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh"
@@ -80,10 +85,16 @@ class CondaCreator(object):
 
         self._download_miniconda()
         logger.debug("Installing Miniconda in {}".format(self.conda_root))
-        check_call(install_cmd)
+
+        proc = Popen(install_cmd, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate()
+
+        logger.debug(out)
+        logger.debug(err)
+
         return os.path.exists(self.python_bin)
 
-    def create_env(self, env_name, packages=[]):
+    def _create_env(self, env_name, packages=[], remove=False):
         """
         Create Conda env environment
 
@@ -91,26 +102,85 @@ class CondaCreator(object):
         ----------
         env_name : str
         packages : list
+        remove : bool
+            remove environment should it exists
+
+        Returns
+        -------
+        path : str
+            path to newly created conda environment
+        """
+
+        env_path = os.path.join(self.conda_root, 'envs', env_name)
+
+        if os.path.exists(env_path):
+            if not remove:
+                raise CondaException("Conda environment: {} already exists".format(env_name))
+            else:
+                shutil.rmtree(env_path)
+
+        if not isinstance(packages, list):
+            raise TypeError("Packages must be a list of strings")
+
+        cmd = [self.conda_bin, 'create', '-n', env_name, '--copy', '-y', '-q'] + packages
+        logger.info("Creating new env {}".format(env_name))
+        logger.info(' '.join(cmd))
+
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        out, err = proc.communicate()
+
+        logger.debug(out)
+        # logger.debug(err)
+
+        env_python = os.path.join(env_path, 'bin', 'python')
+
+        if not os.path.exists(env_python):
+            raise CondaException("Failed to create Python binary.")
+
+        return env_path
+
+
+    def create_env(self, env_name, packages=[], remove=False):
+        """
+        Create Conda env environment
+
+        Parameters
+        ----------
+        env_name : str
+        packages : list
+        remove : bool
+            remove environment should it exists
 
         Returns
         -------
         path : str
             path to zipped conda environment
         """
-
-        if not isinstance(packages, list):
-            raise TypeError("Packages must be a list of strings")
-
-        p_str = ' '.join(packages)
-        cmd = [self.conda_bin, 'create', '-n', env_name, p_str, ' --copy']
-        logger.info("Creating new env {}".format(env_name))
-        logger.info(cmd)
-        check_call(cmd)
+        env_path = self._create_env(env_name, packages, remove)
+        return zip_env(env_path)
 
 
+def zip_env(env_path):
+    """
+    Zip env directory
 
+    Parameters
+    ----------
+    env_path : string
 
+    Returns
+    -------
+    path : string
+        path to zipped file
+    """
 
+    fname = os.path.basename(env_path)+'.zip'
+    env_dir = os.path.dirname(env_path)
+    zFile = os.path.join(env_dir, fname)
 
-
-
+    with open(zFile, 'w') as f:
+        for root, dirs, files in os.walk(env_path):
+            for file in files:
+                f.write(os.path.join(root, file))
+    f.close()
+    return zFile
