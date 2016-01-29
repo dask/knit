@@ -7,8 +7,10 @@ import logging
 from subprocess import Popen, PIPE
 
 from .utils import conf_to_dict
+from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
+
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +41,7 @@ class Knit(object):
     --------
 
     >>> k = Knit()
-    >>> app_id = k.start_application('sleep 100', num_containers=5, memory=1024)
+    >>> app_id = k.start('sleep 100', num_containers=5, memory=1024)
     """
     def __init__(self, nn="localhost", nn_port=9000,
                  rm="localhost", rm_port=8088, autodetect=False):
@@ -324,3 +326,36 @@ class Knit(object):
         logger.debug(err)
 
         return any("Killed application" in s for s in [str(out), str(err)])
+
+    @staticmethod
+    def create_env(self, env_name, packages=None, conda_root=None):
+        """
+
+        Parameters
+        ----------
+        env_name : str
+        packages : list
+        conda_root : str, optional
+
+        Returns
+        -------
+        path: str
+            path to zipped conda environment
+
+        Examples
+        --------
+
+        >>> k = Knit()
+        >>> pkg_path = k.create_env(env_name='dev', packages=[python=3, numpy, distributed])
+        """
+
+
+        c = CondaCreator(conda_root=conda_root)
+        path = c.create_env(env_name, env_name, packages=packages)
+
+        return path
+
+
+
+
+
