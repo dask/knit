@@ -156,7 +156,7 @@ class Knit(object):
 
         return conf
 
-    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, python_env=""):
+    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env=""):
         """
         Method to start a yarn app with a distributed shell
 
@@ -177,7 +177,7 @@ class Knit(object):
         memory: int
             Memory per container (default: 128)
             * The unit for memory is megabytes.
-        python_env: string
+        env: string
             Full Path to zipped Python environment
 
         Returns
@@ -189,8 +189,8 @@ class Knit(object):
         args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numContainers", str(num_containers),
                 "--command", cmd, "--virtualCores", str(virtual_cores), "--memory", str(memory)]
 
-        if python_env:
-            args = args + ["--pythonEnv", str(python_env)]
+        if env:
+            args = args + ["--pythonEnv", str(env)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
@@ -328,7 +328,7 @@ class Knit(object):
         return any("Killed application" in s for s in [str(out), str(err)])
 
     @staticmethod
-    def create_env(self, env_name, packages=None, conda_root=None):
+    def create_env(env_name, packages=None, conda_root=None, remove=False):
         """
 
         Parameters
@@ -336,6 +336,8 @@ class Knit(object):
         env_name : str
         packages : list
         conda_root : str, optional
+        remove : bool
+            remove possible conda environment before creating
 
         Returns
         -------
@@ -349,9 +351,8 @@ class Knit(object):
         >>> pkg_path = k.create_env(env_name='dev', packages=[python=3, numpy, distributed])
         """
 
-
         c = CondaCreator(conda_root=conda_root)
-        path = c.create_env(env_name, env_name, packages=packages)
+        path = c.create_env(env_name, packages=packages, remove=remove)
 
         return path
 

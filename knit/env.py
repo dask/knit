@@ -29,6 +29,7 @@ class CondaCreator(object):
         self.minifile_fp = os.path.join(self.conda_dir, mini_file)
         self.conda_root = conda_root or os.path.join(self.conda_dir, 'miniconda')
         self.python_bin = os.path.join(self.conda_root, 'bin', 'python')
+        self.conda_envs = os.path.join(self.conda_root, 'envs')
         self.conda_bin = os.path.join(self.conda_root, 'bin', 'conda')
 
 
@@ -122,7 +123,7 @@ class CondaCreator(object):
         if not isinstance(packages, list):
             raise TypeError("Packages must be a list of strings")
 
-        cmd = [self.conda_bin, 'create', '-n', env_name, '--copy', '-y', '-q'] + packages
+        cmd = [self.conda_bin, 'create', '-p', env_path, '--copy', '-y', '-q'] + packages
         logger.info("Creating new env {}".format(env_name))
         logger.info(' '.join(cmd))
 
@@ -130,7 +131,7 @@ class CondaCreator(object):
         out, err = proc.communicate()
 
         logger.debug(out)
-        # logger.debug(err)
+        logger.debug(err)
 
         env_python = os.path.join(env_path, 'bin', 'python')
 
@@ -138,7 +139,6 @@ class CondaCreator(object):
             raise CondaException("Failed to create Python binary.")
 
         return env_path
-
 
     def create_env(self, env_name, packages=[], remove=False):
         """
@@ -178,9 +178,8 @@ def zip_env(env_path):
     env_dir = os.path.dirname(env_path)
     zFile = os.path.join(env_dir, fname)
 
-    with open(zFile, 'w') as f:
+    with zipfile.ZipFile(zFile, 'w') as f:
         for root, dirs, files in os.walk(env_path):
             for file in files:
                 f.write(os.path.join(root, file))
-    f.close()
     return zFile

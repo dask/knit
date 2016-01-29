@@ -1,8 +1,8 @@
 import os
-import time
-import pytest
-import socket
 import uuid
+import pytest
+import zipfile
+
 
 from knit.exceptions import CondaException
 from knit.env import CondaCreator
@@ -41,5 +41,5 @@ def test_full_create(c):
     env_zip = os.path.join(c.conda_root, 'envs', env_name+'.zip')
     assert env_zip == c.create_env(env_name, packages=['python=3', 'numpy'], remove=True)
     assert os.path.getsize(env_zip) > 500000 # ensures zipfile has non-0 size
-
+    assert zipfile.is_zipfile(env_zip)
 
