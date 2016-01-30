@@ -14,6 +14,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.io
+import org.apache.hadoop.security.{Credentials, UserGroupInformation}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records.{ContainerLaunchContext, _}
 import org.apache.hadoop.yarn.client.api.YarnClient
@@ -79,6 +80,8 @@ object Client extends Logging {
     val localResources = HashMap[String, LocalResource]()
     //setup env to get all yarn and hadoop classes in classpath
     val env = collection.mutable.Map[String, String]()
+    env("KNIT_USER") = UserGroupInformation.getCurrentUser.getShortUserName
+    env("KNIT_YARN_STAGING_DIR") = stagingDirPath.toString
 
     if (!pythonEnv.isEmpty) {
       //TODO: detect file suffix

@@ -12,6 +12,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest
 import org.apache.hadoop.yarn.client.api.{AMRMClient, NMClient}
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.Records
+import org.apache.hadoop.security.{Credentials, UserGroupInformation}
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException
 
 import io.continuum.knit.Utils._
@@ -40,8 +41,10 @@ object ApplicationMaster {
 
 
     val stagingDir = ".knitDeps"
-    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+    val user = sys.env.get("KNIT_USER")
+    val stagingDirPath = new Path(System.getenv("KNIT_YARN_STAGING_DIR"))
 
+    println(s"User: $user StagingDir: $stagingDirPath")
     println("Running command in container: " + shellCMD)
     val cmd = List(
       shellCMD +
@@ -90,7 +93,6 @@ object ApplicationMaster {
 
         val localResources = HashMap[String, LocalResource]()
         val env = collection.mutable.Map[String, String]()
-
 
         //setup local resources
         if (!pythonEnv.isEmpty) {
