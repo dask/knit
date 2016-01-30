@@ -9,9 +9,10 @@ from knit.exceptions import HDFSConfigException
 
 def check_docker():
     """check if inside docker container"""
-    return os.path.exists('/.dockerenv') 
+    return os.path.exists('/.dockerenv')
 
 inside_docker = check_docker
+
 
 @pytest.yield_fixture
 def k():
@@ -21,24 +22,24 @@ def k():
 
 def test_port(k):
     with pytest.raises(HDFSConfigException):
-        k = Knit(nn_port=90000, rm_port=90000)
+        Knit(nn_port=90000, rm_port=90000)
     with pytest.raises(HDFSConfigException):
-        k = Knit(nn_port=90000, rm_port=8088)
+        Knit(nn_port=90000, rm_port=8088)
     with pytest.raises(HDFSConfigException):
-        k = Knit(nn_port=9000, rm_port=5000)
+        Knit(nn_port=9000, rm_port=5000)
 
     if inside_docker:
         # should pass without incident
-        k = Knit(nn_port=9000, rm_port=8088)
+        Knit(nn_port=9000, rm_port=8088)
 
 
 def test_hostname(k):
     with pytest.raises(HDFSConfigException):
-        k = Knit(nn="foobarbiz")
+        Knit(nn="foobarbiz")
 
     if inside_docker:
         # should pass without incident
-        k = Knit(nn="localhost")
+        Knit(nn="localhost")
 
 
 def test_cmd(k):
@@ -103,7 +104,7 @@ def test_memory(k):
 
 def test_cmd_w_conda_env(k):
     env_zip = k.create_env(env_name='dev', packages=['python=2.6'], remove=True)
-    cmd = '$PYTHON_BIN -c "import sys; print(sys.path); import random; print(str(random.random()))"'
+    cmd = '$PYTHON_BIN -c "import sys; print(sys.version_info); import random; print(str(random.random()))"'
     appId = k.start(cmd, env=env_zip)
 
     status = k.status(appId)
@@ -113,10 +114,10 @@ def test_cmd_w_conda_env(k):
         time.sleep(2)
 
     logs = k.logs(appId, shell=True)
-    assert 'dev/lib/python26.zip' in logs
+    assert "(2, 6, 9, 'final', 0)" in logs
 
 
-## temporarily removing test until vCore handling is better resolved in the core
+# temporarily removing test until vCore handling is better resolved in the core
 # def test_vcores(k):
 #     cmd = "sleep 10"
 #     appId = k.start(cmd, num_containers=1, memory=300, virtual_cores=2)

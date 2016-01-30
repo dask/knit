@@ -17,7 +17,7 @@ Python
 Shipping Conda
 ~~~~~~~~~~~~~~
 
-Ship runtime environment with latest ``distributed`` and PyData stack.
+Ship runtime environments
 
 .. code-block:: python
 

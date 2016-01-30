@@ -11,12 +11,13 @@ from subprocess import Popen, PIPE
 from .exceptions import CondaException
 
 mini_file = "Miniconda-latest.sh"
-
-linux_miniconda_url = "https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh"
-osx_miniconda_url = "https://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh"
-win_miniconda_url = "https://repo.continuum.io/miniconda/Miniconda-latest-Windows-x86_64.exe"
+miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh",
+                 "darwin": "https://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh",
+                 "win": "https://repo.continuum.io/miniconda/Miniconda-latest-Windows-x86_64.exe"
+}
 
 logger = logging.getLogger(__name__)
+
 
 class CondaCreator(object):
     """
@@ -32,19 +33,15 @@ class CondaCreator(object):
         self.conda_envs = os.path.join(self.conda_root, 'envs')
         self.conda_bin = os.path.join(self.conda_root, 'bin', 'conda')
 
-
     @property
     def miniconda_url(self):
-        conda_os = zip(['linux', 'darwin', 'win'], [linux_miniconda_url, osx_miniconda_url, win_miniconda_url])
-        conda_os = dict((system, url) for system, url in conda_os)
-        plat = sys.platform
 
         if sys.platform.startswith('linux'):
-            url = conda_os['linux']
+            url = miniconda_urls['linux']
         elif sys.platform.startswith('darwin'):
-            url = conda_os['darwin']
+            url = miniconda_urls['darwin']
         else:
-            url = conda_os['win']
+            url = miniconda_urls['win']
 
         # 64bit check
         if not sys.maxsize > 2**32:
@@ -76,7 +73,9 @@ class CondaCreator(object):
 
     def _install(self):
         """
-        Returns True if miniconda is successfully installed
+        Install miniconda.
+
+        Returns True if miniconda is successfully installed or was previously created
         """
 
         install_cmd = "bash {} -b -p {}".format(self.minifile_fp, self.conda_root).split()
@@ -104,7 +103,7 @@ class CondaCreator(object):
         env_name : str
         packages : list
         remove : bool
-            remove environment should it exists
+            remove environment should it exist
 
         Returns
         -------
@@ -151,7 +150,7 @@ class CondaCreator(object):
         env_name : str
         packages : list
         remove : bool
-            remove environment should it exists
+            remove environment should it exist
 
         Returns
         -------
@@ -175,7 +174,7 @@ class CondaCreator(object):
             path to zipped file
         """
 
-        fname = os.path.basename(env_path)+'.zip'
+        fname = os.path.basename(env_path) + '.zip'
         env_dir = os.path.dirname(env_path)
         zFile = os.path.join(env_dir, fname)
 
@@ -183,6 +182,6 @@ class CondaCreator(object):
             for root, dirs, files in os.walk(env_path):
                 for file in files:
                     relfile = os.path.join(os.path.relpath(root, self.conda_envs), file)
-                    absfile =os.path.join(root, file)
+                    absfile = os.path.join(root, file)
                     f.write(absfile, relfile)
         return zFile
