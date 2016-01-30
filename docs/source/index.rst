@@ -22,5 +22,5 @@ Refer to the following documentation to get started with `knit`:
    :maxdepth: 1
 
    install
-   source
+   usage
    api

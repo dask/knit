@@ -112,6 +112,8 @@ class CondaCreator(object):
             path to newly created conda environment
         """
 
+        # ensure miniconda is installed
+        self._install()
         env_path = os.path.join(self.conda_root, 'envs', env_name)
 
         if os.path.exists(env_path):

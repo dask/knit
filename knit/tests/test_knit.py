@@ -113,7 +113,7 @@ def test_cmd_w_conda_env(k):
         time.sleep(2)
 
     logs = k.logs(appId, shell=True)
-    assert 'dev/lib/python35.zip' in logs
+    assert 'dev/lib/python26.zip' in logs
 
 
 ## temporarily removing test until vCore handling is better resolved in the core
