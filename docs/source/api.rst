@@ -5,10 +5,11 @@ API
 
 .. autosummary::
    Knit
-   Knit.start_application
-   Knit.get_application_logs
-   Knit.get_application_status
-   Knit.kill_application
+   Knit.start
+   Knit.logs
+   Knit.status
+   Knit.kill
+   Knit.create_env
 
 .. autoclass:: Knit
    :members:
