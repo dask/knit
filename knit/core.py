@@ -330,6 +330,7 @@ class Knit(object):
     @staticmethod
     def create_env(env_name, packages=None, conda_root=None, remove=False):
         """
+        Create zipped directory of a conda environment
 
         Parameters
         ----------

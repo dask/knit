@@ -143,7 +143,7 @@ class CondaCreator(object):
 
     def create_env(self, env_name, packages=[], remove=False):
         """
-        Create Conda env environment
+        Create zipped directory of a conda environmentt
 
         Parameters
         ----------
