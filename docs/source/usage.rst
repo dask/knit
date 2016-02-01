@@ -16,7 +16,7 @@ Python
 Zipped Conda Envs
 ~~~~~~~~~~~~~~~~~
 
-Often nodes managed under YARN may not have desired Python library or the Python binary at all!  In these cases,
+Often nodes managed under YARN may not have desired Python libraries or the Python binary at all!  In these cases,
 we want to package up an environment to be shipped along with the command.  ``knit`` allows us to declare a
 zipped directory with the following structure typical of Python environments::
 

@@ -30,4 +30,4 @@ Clone git repository and build maven project:
 
    $ git clone https://github.com/blaze/knit
    $ cd knit
-   $ python setup.py install
+   $ python setup.py install mvn
