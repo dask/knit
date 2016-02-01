@@ -168,11 +168,11 @@ class Knit(object):
         cmd: str
             command to run in each yarn container
         num_containers: int
-            number of containers to start (default 1)
-        num_containers: int
             Number of containers YARN should request (default: 1)
-            * A container should be requested with the number of cores it can saturate, i.e.
-            * the average number of threads it expects to have runnable at a time.
+            * A container should be requested with the number of cores it can
+              saturate, i.e.
+            * the average number of threads it expects to have runnable at a
+              time.
         virtual_cores: int
             Number of virtual cores per container (default: 1)
             * A node's capacity should be configured with virtual cores equal to
@@ -352,7 +352,8 @@ class Knit(object):
         --------
 
         >>> k = Knit()
-        >>> pkg_path = k.create_env(env_name='dev', packages=[python=3, numpy, distributed])
+        >>> pkg_path = k.create_env(env_name='dev',
+        ...                         packages=['distributed', 'dask', 'pandas'])
         """
 
         c = CondaCreator(conda_root=conda_root)
