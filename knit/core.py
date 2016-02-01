@@ -66,6 +66,12 @@ class Knit(object):
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
 
+    def __str__(self):
+        return "Knit<NN={}:{};RM={}:{}>".format(self.nn, self.nn_port,
+                                                     self.rm, self.rm_port)
+
+    __repr__ = __str__
+
     @property
     def JAR_FILE_PATH(self):
         return os.path.join(self.KNIT_HOME, JAR_FILE)
