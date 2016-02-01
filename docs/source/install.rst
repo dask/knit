@@ -6,8 +6,9 @@ Easy
 
 Use ``pip`` or ``conda`` to install::
 
-   $ pip install knit --upgrade
    $ conda install knit
+   or
+   $ pip install knit --upgrade
 
 
 Source
@@ -28,4 +29,5 @@ Clone git repository and build maven project:
 .. code-block:: bash
 
    $ git clone https://github.com/blaze/knit
+   $ cd knit
    $ python setup.py install

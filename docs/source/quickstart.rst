@@ -12,8 +12,8 @@ Use ``pip`` or ``conda`` to install::
 Start Command
 ~~~~~~~~~~~~~
 
-Instantiate ``knit`` with valid ResourceManager/Namenode IP/Ports and create a command string to run in
-all YARN containers
+Instantiate ``knit`` with valid ResourceManager/Namenode IP/Ports and create a command string to run
+in all YARN containers
 
 .. code-block:: python
 
@@ -27,8 +27,9 @@ all YARN containers
 Status
 ~~~~~~
 
-After starting/submitting a command you can monitor it's progress.  The ``status`` method communicates with YARN's
-`ResourceManager`_ and returns a python dictionary with current monitoring data
+After starting/submitting a command you can monitor its progress.  The ``status`` method
+communicates with YARN's `ResourceManager`_ and returns a python dictionary with current
+monitoring data.
 
 .. code-block:: python
 
@@ -60,19 +61,19 @@ After starting/submitting a command you can monitor it's progress.  The ``status
   'user': 'ubuntu',
   'vcoreSeconds': 123}}
 
-Often a user will want to track the ``state`` of an application.  Possible ``states`` include: ``NEW``,
+Often we track the ``state`` of an application.  Possible ``states`` include: ``NEW``,
 ``NEW_SAVING``, ``SUBMITTED``, ``ACCEPTED``, ``RUNNING``, ``FINISHED``, ``FAILED``, ``KILLED``
 
 Logs
 ~~~~
 
-Users can retrieve log data directly from a ``RUNNING` Application Master::
-
+We retrieve log data directly from a ``RUNNING`` Application Master::
 
    >>> k.logs(app_id)
 
-Or if log aggregation is enabled, users can retrieve the resulting aggregated log data stored in HDFS.  Note:
-aggregated log data is only available **after** the application has finished or been terminated::
+Or, if log aggregation is enabled, we retrieve the resulting aggregated log data stored in HDFS.  Note:
+aggregated log data is only available **after** the application has finished or been terminated
+using the ``shell=True`` keyword argument::
 
    >>> k.logs(app_id, shell=True)
 
@@ -80,7 +81,7 @@ aggregated log data is only available **after** the application has finished or 
 Kill
 ~~~~
 
-When you need to stop an application from executing immediately, users can use the ``kill`` method:
+To stop an application from executing immediately, use the ``kill`` method:
 
 ::
 
@@ -90,7 +91,7 @@ When you need to stop an application from executing immediately, users can use t
 Python Applications
 ~~~~~~~~~~~~~~~~~~~
 
-A simple Python based application
+A simple Python based application:
 
 .. code-block:: python
 
@@ -100,7 +101,7 @@ A simple Python based application
    cmd = 'python -c "import sys; print(sys.version_info); import random; print(str(random.random()))"'
    app_id = k.start(cmd, num_containers=2)
 
-A long running Python application
+A long running Python application:
 
 .. code-block:: python
 
