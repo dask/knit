@@ -13,7 +13,7 @@ import versioneer
 
 if not 'nojava' in sys.argv:
     #JAVA_HOME necessary for building
-    if os.environ.get("JAVA_HOME"):
+    if not os.environ.get("JAVA_HOME"):
         print("PLEASE SET JAVA_HOME")
         sys.exit(1)
 
