@@ -66,12 +66,12 @@ Often a user will want to track the ``state`` of an application.  Possible ``sta
 Logs
 ~~~~
 
-Users can retrieve log data directly from a running Application Master::
+Users can retrieve log data directly from a ``RUNNING` Application Master::
 
 
    >>> k.logs(app_id)
 
-Or if log aggregation is enabled with YARN user can retrieve the log data stored in HDFS.  Note:
+Or if log aggregation is enabled, users can retrieve the resulting aggregated log data stored in HDFS.  Note:
 aggregated log data is only available **after** the application has finished or been terminated::
 
    >>> k.logs(app_id, shell=True)

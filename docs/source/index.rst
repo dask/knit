@@ -4,7 +4,7 @@ knit
 ``knit`` is an easy interface for launching distributed applications with `YARN`_.  Additionally, it provides many
 conveniences for Python and other runtime languages.  Many YARN applications are nothing more than distributed shell
 commands -- the `Hello World`_ for YARN is running a unix command on several nodes in a cluster.  ``knit`` implements
-a generalized distrubted shell command and allows users to express commands/applications, as well as desired, resources managed
+a generalized distrubted shell command and allows users to express commands/applications, as well as desired resources managed
 under YARN through Python or directly on the command line.
 
 .. code-block:: python
