@@ -46,3 +46,12 @@ def test_full_create(c):
     with zipfile.ZipFile(env_zip, 'r') as f:
         assert f.getinfo('test_env/bin/python')
 
+
+def test_find_env(c):
+    env_name = 'test_env'
+    env_zip = os.path.join(c.conda_root, 'envs', env_name+'.zip')
+    assert env_zip == c.create_env(env_name)
+
+    # no error here -- the packages have already been installed so we
+    # return the env_zip
+    env_zip == c.create_env(env_name, packages=['python=3', 'numpy'])

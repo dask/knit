@@ -2,6 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import re
 import logging
+import subprocess
 
 format = ('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.basicConfig(format=format, level=logging.DEBUG)
@@ -31,3 +32,20 @@ def conf_to_dict(fname):
                 val = True
             conf[key] = val
     return conf
+
+
+def shell_out(cmd=None):
+    """
+    Thin layer on check_output to return data as strings
+
+    Parameters
+    ----------
+    cmd : list
+        command to run
+
+    Returns
+    -------
+    result : str
+        result of shell command
+    """
+    return subprocess.check_output(cmd).decode('utf-8')

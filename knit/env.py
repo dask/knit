@@ -6,9 +6,10 @@ import shutil
 import requests
 import logging
 import zipfile
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_output
 
 from .exceptions import CondaException
+from .utils import shell_out
 
 mini_file = "Miniconda-latest.sh"
 miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh",
@@ -71,17 +72,18 @@ class CondaCreator(object):
 
         return os.path.abspath(mini_file)
 
-    def _install(self):
+    def _install_miniconda(self):
         """
         Install miniconda.
 
-        Returns True if miniconda is successfully installed or was previously created
+        Returns True if miniconda is successfully installed or was previously
+        created
         """
-
-        install_cmd = "bash {} -b -p {}".format(self.minifile_fp, self.conda_root).split()
 
         if self.miniconda_check:
             return self.conda_root
+
+        install_cmd = "bash {} -b -p {}".format(self.minifile_fp, self.conda_root).split()
 
         self._download_miniconda()
         logger.debug("Installing Miniconda in {}".format(self.conda_root))
@@ -94,7 +96,7 @@ class CondaCreator(object):
 
         return os.path.exists(self.python_bin)
 
-    def _create_env(self, env_name, packages=[], remove=False):
+    def _create_env(self, env_name, packages=None, remove=False):
         """
         Create Conda env environment
 
@@ -112,10 +114,19 @@ class CondaCreator(object):
         """
 
         # ensure miniconda is installed
-        self._install()
+        self._install_miniconda()
         env_path = os.path.join(self.conda_root, 'envs', env_name)
 
         if os.path.exists(env_path):
+            conda_list = shell_out([self.conda_bin, 'list', '-n', env_name]).split()
+
+            # filter out python/python=3
+            pkgs = [p for p in packages if not 'python' in p]
+
+            # try to be idempotent -- if packages exist don't recreate
+            if any(p in conda_list for p in packages):
+                return env_path
+
             if not remove:
                 raise CondaException("Conda environment: {} already exists".format(env_name))
             else:
@@ -141,7 +152,26 @@ class CondaCreator(object):
 
         return env_path
 
-    def create_env(self, env_name, packages=[], remove=False):
+    def find_env(self, env_name):
+        """
+        Find full path to env_name
+
+        Parameters
+        ----------
+        env_name : str
+
+        Returns
+        -------
+        path : str
+            path to conda environment
+        """
+
+        env_path = os.path.join(self.conda_root, 'envs', env_name)
+
+        if os.path.exists(env_path):
+            return env_path
+
+    def create_env(self, env_name, packages=None, remove=False):
         """
         Create zipped directory of a conda environmentt
 
@@ -157,7 +187,12 @@ class CondaCreator(object):
         path : str
             path to zipped conda environment
         """
-        env_path = self._create_env(env_name, packages, remove)
+
+        if not packages:
+            env_path = self.find_env(env_name)
+        else:
+            env_path = self._create_env(env_name, packages, remove)
+
         return self.zip_env(env_path)
 
     def zip_env(self, env_path):

@@ -360,8 +360,3 @@ class Knit(object):
         path = c.create_env(env_name, packages=packages, remove=remove)
 
         return path
-
-
-
-
-
