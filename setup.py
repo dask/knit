@@ -11,25 +11,26 @@ import versioneer
 # Optional building with MAVEN
 #------------------------------------------------------------------------
 
-if not 'nojava' in sys.argv:
-    #JAVA_HOME necessary for building
+JAVA_SRC = "knit_jvm"
+jar_file = os.path.join(JAVA_SRC,"target", "knit-1.0-SNAPSHOT.jar")
+
+if 'mvn' in sys.argv:
+
+    # JAVA_HOME necessary for building
     if not os.environ.get("JAVA_HOME"):
         print("PLEASE SET JAVA_HOME")
         sys.exit(1)
 
-    JAVA_SRC = "knit_jvm"
     os.chdir(JAVA_SRC)
     build_cmd = "mvn clean install -q"
     os.system(build_cmd)
     os.chdir("..")
-    jar_file = os.path.join(JAVA_SRC,"target", "knit-1.0-SNAPSHOT.jar")
+    sys.argv.remove("mvn")
 
     java_lib_dir = os.path.join("knit","java_libs")
     if not os.path.exists(java_lib_dir):
         os.mkdir(java_lib_dir)
     shutil.copy(jar_file,java_lib_dir)
-else:
-    assert 'nojava' == sys.argv.pop(2)
 
 setup(name='knit',
       version=versioneer.get_version(),

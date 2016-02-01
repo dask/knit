@@ -32,7 +32,7 @@ before_install:
 install:
   - pwd
   - echo $DOCKER_ENV
-  - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/python setup.py install
+  - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/python setup.py install mvn
 
 script:
   - pwd
