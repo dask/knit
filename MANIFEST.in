@@ -1,5 +1,6 @@
 recursive-include knit *.py
 recursive-include docs *.rst
+prune knit/tmp_conda
 
 include LICENSE
 include setup.py
