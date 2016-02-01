@@ -28,11 +28,11 @@ class Knit(object):
         Namenode hostname/ip
     nn: str
         Namenode hostname/ip
-    nn_port: int
+    nn_port: str
         Namenode Port (default: 9000)
     rm: str
         Resource Manager hostname
-    rm_port: int
+    rm_port: str
         Resource Manager port (default: 8088)
     autodetect: bool
         Autodetect NN/RM IP/Ports
@@ -46,23 +46,25 @@ class Knit(object):
     def __init__(self, nn="localhost", nn_port=9000,
                  rm="localhost", rm_port=8088, autodetect=False):
 
-        if autodetect:
-             self.nn,  self.nn_port = self._yarn_conf(autodetect)
-             self.rm,  self.rm_port = self._hdfs_conf(autodetect)
-
         self.nn = nn
         self.nn_port = str(nn_port)
 
         self.rm = rm
         self.rm_port = str(rm_port)
 
+        if autodetect:
+            self.nn,  self.nn_port = self._hdfs_conf(autodetect)
+            self.rm,  self.rm_port = self._yarn_conf(autodetect)
+        else:
+            # validates IP/Port is correct
+            self._hdfs_conf()
+            self._yarn_conf()
+
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
-        self._hdfs_conf()
-        self._yarn_conf()
 
     @property
     def JAR_FILE_PATH(self):
@@ -109,7 +111,7 @@ class Knit(object):
         if self.rm != conf['host']:
             msg = "Possible Resource Manager hostname mismatch.  Detected {}".format(conf['host'])
             raise HDFSConfigException(msg)
-        if self.rm_port != conf['port']:
+        if str(self.rm_port) != str(conf['port']):
             msg = "Possible Resource Manager port mismatch.  Detected {}".format(conf['port'])
             raise HDFSConfigException(msg)
 
@@ -129,13 +131,13 @@ class Knit(object):
 
         confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
                                '') + '/hadoop/conf')
-        files = 'core-site.xml', 'hdfs-site.xml'
+        afile = 'core-site.xml'
         conf = {}
-        for afile in files:
-            try:
-                conf.update(conf_to_dict(os.sep.join([confd, afile])))
-            except FileNotFoundError:
-                pass
+        try:
+            conf.update(conf_to_dict(os.sep.join([confd, afile])))
+        except FileNotFoundError:
+            pass
+        
         if 'fs.defaultFS' in conf:
             u = urlparse(conf['fs.defaultFS'])
             conf['host'] = u.hostname
@@ -150,7 +152,8 @@ class Knit(object):
         if self.nn != conf['host']:
             msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
             raise HDFSConfigException(msg)
-        if self.nn_port != str(conf['port']):
+
+        if str(self.nn_port) != str(conf['port']):
             msg = "Possible Namenode port mismatch.  Detected {}".format(conf['port'])
             raise HDFSConfigException(msg)
 
