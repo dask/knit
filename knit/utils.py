@@ -5,7 +5,12 @@ import logging
 import subprocess
 
 format = ('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logging.basicConfig(format=format, level=logging.DEBUG)
+logging.basicConfig(format=format, level=logging.INFO)
+
+
+def set_logging(level):
+    logger = logging.getLogger('knit')
+    logger.setLevel(level)
 
 
 def conf_to_dict(fname):
