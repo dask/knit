@@ -22,5 +22,8 @@ project/plugins/project/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+.coverage
+htmlcov/
+knit/tmp_conda/
 
 *.swp

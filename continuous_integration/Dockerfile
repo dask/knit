@@ -6,8 +6,10 @@ RUN curl http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -o 
 RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
 ENV PATH /opt/anaconda/bin:$PATH
-RUN conda install -y -q pytest requests apache-maven -c anaconda-cluster
-RUN conda create -y -q -n py3 python=3 pytest requests apache-maven -c anaconda-cluster
+RUN conda install -y -q pip coverage pytest requests apache-maven -c anaconda-cluster
+RUN conda create -y -q -n py3 coverage python=3 pytest requests apache-maven -c anaconda-cluster
+RUN /opt/anaconda/bin/pip install coveralls
+RUN /opt/anaconda/envs/py3/bin/pip install coveralls
 
 # Cloudera repositories
 RUN curl -s http://archive.cloudera.com/cdh5/ubuntu/trusty/amd64/cdh/archive.key | apt-key add -

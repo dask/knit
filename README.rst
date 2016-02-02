@@ -1,7 +1,7 @@
 knit
 ========
 
-|Build Status|
+|Build Status| |Coverage Status|
 
 The ``knit`` library provides a Python interface to Scala for interacting
 with the YARN resource manager.
@@ -14,3 +14,6 @@ Originally forked from: https://github.com/phatak-dev/blog/tree/master/code/Yarn
 
 .. |Build Status| image:: https://travis-ci.org/blaze/knit.svg?branch=master
     :target: https://travis-ci.org/blaze/knit
+
+.. |Coverage Status| image:: https://coveralls.io/repos/github/blaze/knit/badge.svg?branch=master
+    :target: https://coveralls.io/github/blaze/knit?branch=master
