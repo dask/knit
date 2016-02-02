@@ -20,7 +20,7 @@ def c():
 
 
 def test_miniconda_install(c):
-    assert c._install()
+    assert c._install_miniconda()
 
 
 def test_create(c):
@@ -33,7 +33,7 @@ def test_create(c):
     assert env_path == c._create_env(env_name, packages=['python=3', 'numpy'], remove=True)
 
     with pytest.raises(CondaException):
-        c._create_env(env_name, packages=['numpy'])
+        c._create_env(env_name, packages=['pandas'])
 
 
 def test_full_create(c):
