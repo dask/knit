@@ -36,4 +36,7 @@ install:
 
 script:
   - pwd
-  - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/py.test /knit -s -vv
+  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
+
+after_success:
+  - ./.coverage_test_travisci.sh
