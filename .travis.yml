@@ -27,7 +27,7 @@ before_install:
   - pushd continuous_integration
   - docker-compose up -d
   - export CONTAINER_ID="knit_container"
-  - sleep 80  # Wait for namenode and datanode
+  - sleep 20
 
 install:
   - pwd
@@ -39,4 +39,6 @@ script:
   - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
 
 after_success:
-  - ./.coverage_test_travisci.sh
+  - popd
+  - pip install coveralls
+  - coveralls
