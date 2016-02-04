@@ -6,7 +6,7 @@ import requests
 import logging
 from subprocess import Popen, PIPE
 
-from .utils import conf_to_dict
+from .utils import conf_find
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
@@ -90,33 +90,34 @@ class Knit(object):
         """
         confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
                                '') + '/hadoop/conf')
-        afile = 'yarn-site.xml'
         conf = {}
-
+        yarn_site = os.path.join(confd, 'yarn-site.xml')
         try:
-            conf.update(conf_to_dict(os.sep.join([confd, afile])))
+            with open(yarn_site, 'r') as f:
+                url = conf_find(f, 'yarn.resourcemanager.webapp.address')
+                if url:
+                    u = urlparse(url)
+
+                    # handle host:port with no :// preabmle
+                    if u.path == url:
+                        conf['host'], conf['port'] = url.split(':')
+                    else:
+                        conf['host'] = u.hostname
+                        conf['port'] = u.port
         except FileNotFoundError:
             pass
-        if 'yarn.resourcemanager.webapp.address' in conf:
-            url = conf['yarn.resourcemanager.webapp.address']
-            u = urlparse(url)
-
-            # handle host:port with no :// preabmle
-            if u.path == url:
-                conf['host'], conf['port'] = url.split(':')
-            else:
-                conf['host'] = u.hostname
-                conf['port'] = u.port
-        else:
-            conf['host'] = "localhost"
-            conf['port'] = "8088"
+        finally:
+            if not conf:
+                conf['host'] = "localhost"
+                conf['port'] = "8088"
 
         if autodetect:
-            return (conf['host'], conf['port'])
+            return conf['host'], conf['port']
 
         if self.rm != conf['host']:
             msg = "Possible Resource Manager hostname mismatch.  Detected {}".format(conf['host'])
             raise HDFSConfigException(msg)
+
         if str(self.rm_port) != str(conf['port']):
             msg = "Possible Resource Manager port mismatch.  Detected {}".format(conf['port'])
             raise HDFSConfigException(msg)
@@ -134,26 +135,29 @@ class Knit(object):
             tuple (ip, port)
 
         """
-
         confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
                                '') + '/hadoop/conf')
-        afile = 'core-site.xml'
         conf = {}
+        core_site = os.path.join(confd, 'core-site.xml')
+
         try:
-            conf.update(conf_to_dict(os.sep.join([confd, afile])))
+            with open(core_site, 'r') as f:
+                url = conf_find(f, 'fs.defaultFS')
+                if url:
+                    u = urlparse(url)
+
+                    # handle host:port with no :// preabmle
+                    if u.path == url:
+                        conf['host'], conf['port'] = url.split(':')
+                    else:
+                        conf['host'] = u.hostname
+                        conf['port'] = u.port
         except FileNotFoundError:
             pass
-        
-        if 'fs.defaultFS' in conf:
-            u = urlparse(conf['fs.defaultFS'])
-            conf['host'] = u.hostname
-            conf['port'] = u.port
-        else:
-            conf['host'] = "localhost"
-            conf['port'] = "9000"
-
-        if autodetect:
-            return (conf['host'], conf['port'])
+        finally:
+            if not conf:
+                conf['host'] = "localhost"
+                conf['port'] = "9000"
 
         if self.nn != conf['host']:
             msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
