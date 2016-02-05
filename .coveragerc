@@ -1,5 +1,7 @@
 [run]
 omit =
     */test_*.py
+    knit/_version.py
+    knit/compatibility.py
 source = 
     knit

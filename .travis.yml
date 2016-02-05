@@ -39,6 +39,5 @@ script:
   - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
 
 after_success:
-  - popd
-  - pip install coveralls
-  - coveralls
+  - docker exec -it $CONTAINER_ID bash -c "export TRAVIS=$TRAVIS && export TRAVIS_JOB_ID=$TRAVIS_JOB_ID && TRAVIS_BRANCH=$TRAVIS_BRANCH && /knit/continuous_integration/coverage_upload.sh"
+

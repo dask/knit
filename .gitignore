@@ -13,6 +13,9 @@ src_managed/
 project/boot/
 project/plugins/project/
 
+# mvn
+dependency-reduced-pom.xml
+
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
@@ -25,5 +28,7 @@ __pycache__/
 .coverage
 htmlcov/
 knit/tmp_conda/
+knit.egg-info/
+build/
 
 *.swp

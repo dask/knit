@@ -3,11 +3,13 @@ package:
     version: 0.0.1
 
 source:
-    path: ../..
+    path: ../
 
 requirements:
     build:
-        - python
+`        - python
+        - apache-maven
+        - java-jdk [linux]
     run:
         - python
 
