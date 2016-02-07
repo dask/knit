@@ -40,6 +40,8 @@ def test_hostname(k):
     if inside_docker:
         # should pass without incident
         Knit(nn="localhost")
+        k = Knit(autodetect=True)
+        str(k) == 'Knit<NN=localhost:9000;RM=localhost:8088>'
 
 
 def test_cmd(k):
