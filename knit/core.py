@@ -154,10 +154,14 @@ class Knit(object):
                         conf['port'] = u.port
         except FileNotFoundError:
             pass
+
         finally:
             if not conf:
                 conf['host'] = "localhost"
                 conf['port'] = "9000"
+
+        if autodetect:
+            return conf['host'], conf['port']
 
         if self.nn != conf['host']:
             msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
