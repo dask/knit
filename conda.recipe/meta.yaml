@@ -7,7 +7,7 @@ source:
 
 requirements:
     build:
-`        - python
+        - python
         - apache-maven
         - java-jdk [linux]
     run:
