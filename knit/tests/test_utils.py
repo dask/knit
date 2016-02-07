@@ -1,10 +1,8 @@
 import os
-import time
-import pytest
-import socket
+import logging
 from lxml import etree
 
-from knit.utils import conf_find
+from knit.utils import conf_find, set_logging
 from knit.exceptions import HDFSConfigException
 
 cur_dir = os.path.dirname(__file__)
@@ -20,3 +18,11 @@ inside_docker = check_docker
 def test_conf_parse():
     assert 'hdfs://knit-host:9000' == conf_find(core_site, 'fs.defaultFS')
     assert '' == conf_find(core_site, 'FOO/BAR')
+
+
+def test_set_logging():
+    logger = logging.getLogger('knit')
+    set_logging(logging.DEBUG)
+    assert logger.level == logging.DEBUG
+    set_logging(logging.INFO)
+    assert logger.level == logging.INFO
