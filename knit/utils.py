@@ -6,7 +6,7 @@ import subprocess
 
 from lxml import etree
 
-from .compatibility import FileNotFoundError, urlparse
+from .compatibility import urlparse
 
 format = ('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.basicConfig(format=format, level=logging.INFO)
@@ -15,6 +15,21 @@ logging.basicConfig(format=format, level=logging.INFO)
 def set_logging(level):
     logger = logging.getLogger('knit')
     logger.setLevel(level)
+
+
+def parse_xml(f, search_string=''):
+    conf = {}
+    url = conf_find(f, search_string)
+    if url:
+        u = urlparse(url)
+
+        # handle host:port with no :// preabmle
+        if u.path == url:
+            conf['host'], conf['port'] = url.split(':')
+        else:
+            conf['host'] = u.hostname
+            conf['port'] = u.port
+    return conf
 
 
 def conf_find(fp='', name=''):

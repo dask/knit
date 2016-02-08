@@ -6,7 +6,7 @@ import requests
 import logging
 from subprocess import Popen, PIPE
 
-from .utils import conf_find
+from .utils import parse_xml
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
@@ -95,16 +95,7 @@ class Knit(YARNAPI):
         yarn_site = os.path.join(confd, 'yarn-site.xml')
         try:
             with open(yarn_site, 'r') as f:
-                url = conf_find(f, 'yarn.resourcemanager.webapp.address')
-                if url:
-                    u = urlparse(url)
-
-                    # handle host:port with no :// preabmle
-                    if u.path == url:
-                        conf['host'], conf['port'] = url.split(':')
-                    else:
-                        conf['host'] = u.hostname
-                        conf['port'] = u.port
+                conf = parse_xml(f, 'yarn.resourcemanager.webapp.address')
         except FileNotFoundError:
             pass
         finally:
@@ -143,16 +134,7 @@ class Knit(YARNAPI):
 
         try:
             with open(core_site, 'r') as f:
-                url = conf_find(f, 'fs.defaultFS')
-                if url:
-                    u = urlparse(url)
-
-                    # handle host:port with no :// preabmle
-                    if u.path == url:
-                        conf['host'], conf['port'] = url.split(':')
-                    else:
-                        conf['host'] = u.hostname
-                        conf['port'] = u.port
+                conf = parse_xml(core_site, 'fs.defaultFS')
         except FileNotFoundError:
             pass
 
