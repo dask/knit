@@ -6,7 +6,7 @@ Easy
 
 Use ``pip`` or ``conda`` to install::
 
-   $ conda install knit
+   $ conda install knit -c blaze
    or
    $ pip install knit --upgrade
 

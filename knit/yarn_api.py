@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import requests
 import logging
+from functools import wraps
 from subprocess import Popen, PIPE
 
 from .utils import shell_out
@@ -11,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_app_id(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         cls = args[0]
         app_id = args[1]

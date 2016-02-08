@@ -6,7 +6,7 @@ import requests
 import logging
 from subprocess import Popen, PIPE
 
-from .utils import parse_xml
+from .utils import parse_xml, inherit_docstring_from
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
@@ -18,7 +18,7 @@ JAR_FILE = "knit-1.0-SNAPSHOT.jar"
 JAVA_APP = "io.continuum.knit.Client"
 
 
-class Knit(YARNAPI):
+class Knit(object):
     """
     Connection to HDFS/YARN
 
@@ -59,7 +59,8 @@ class Knit(YARNAPI):
             # validates IP/Port is correct
             self._hdfs_conf()
             self._yarn_conf()
-        super(Knit, self).__init__(rm, rm_port)
+
+        self.yarn_api = YARNAPI(rm, rm_port)
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
@@ -236,3 +237,15 @@ class Knit(YARNAPI):
         path = c.create_env(env_name, packages=packages, remove=remove)
 
         return path
+
+    @inherit_docstring_from(YARNAPI)
+    def logs(self, app_id, shell=False):
+        self.yarn_api.logs(app_id, shell=shell)
+
+    @inherit_docstring_from(YARNAPI)
+    def kill(self, app_id):
+        self.yarn_api.kill(app_id)
+
+    @inherit_docstring_from(YARNAPI)
+    def status(self, app_id, shell=False):
+        self.yarn_api.status(app_id, shell=shell)

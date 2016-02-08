@@ -1,9 +1,14 @@
 Usage
 =====
 
+``Knit`` can be used in several novel ways.  Our primary concern is supporting easy deployment of
+distributed Python runtimes; though, we can also consider other languages (R, Julia, etc) should
+interest develop.  Below are a few novels ways we can currently use ``Knit``
 
 Python
 ~~~~~~
+
+The example below use Python found in the $PATH setting.  This is usually the system Python.
 
 .. code-block:: python
 
