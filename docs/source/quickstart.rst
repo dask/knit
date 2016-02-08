@@ -1,16 +1,19 @@
 Quickstart
-----------
+==========
 
 Install
-~~~~~~~
+-------
 
 Use ``pip`` or ``conda`` to install::
 
    $ pip install knit --upgrade
-   $ conda install knit
+   $ conda install knit -c blaze
 
-Start Command
-~~~~~~~~~~~~~
+Commands
+--------
+
+Start
+~~~~~
 
 Instantiate ``knit`` with valid ResourceManager/Namenode IP/Ports and create a command string to run
 in all YARN containers
@@ -20,9 +23,10 @@ in all YARN containers
    >>> from knit import Knit
    >>> k = Knit(autodetect=True) # autodetect IP/Ports for YARN/HADOOP
    >>> cmd = 'date'
-   >>> app_id = k.start(cmd)
+   >>> k.start(cmd)
+   'application_1454900586318_0004'
 
-``start`` also take parameters: ``num_containers``, ``memory``, and ``virtual_cores``
+``start`` also takes parameters: ``num_containers``, ``memory``, ``virtual_cores``, and ``env``
 
 Status
 ~~~~~~
@@ -89,7 +93,7 @@ To stop an application from executing immediately, use the ``kill`` method:
 
 
 Python Applications
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 A simple Python based application:
 

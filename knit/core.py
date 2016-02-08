@@ -18,7 +18,7 @@ JAR_FILE = "knit-1.0-SNAPSHOT.jar"
 JAVA_APP = "io.continuum.knit.Client"
 
 
-class Knit(YARNAPI):
+class Knit(object):
     """
     Connection to HDFS/YARN
 
@@ -59,7 +59,8 @@ class Knit(YARNAPI):
             # validates IP/Port is correct
             self._hdfs_conf()
             self._yarn_conf()
-        super(Knit, self).__init__(rm, rm_port)
+
+        self.yarn_api = YARNAPI(rm, rm_port)
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
@@ -236,3 +237,57 @@ class Knit(YARNAPI):
         path = c.create_env(env_name, packages=packages, remove=remove)
 
         return path
+
+    def logs(self, app_id, shell=False):
+        """
+        Collect logs from RM (if running)
+        With shell=True, collect logs from HDFS after job completion
+
+        Parameters
+        ----------
+        app_id: str
+             A yarn application ID string
+        shell: bool
+             Shell out to yarn CLI (default False)
+
+        Returns
+        -------
+        log: dictionary
+            logs from each container (when possible)
+        """
+        return self.yarn_api.logs(app_id, shell=shell)
+
+    def kill(self, app_id):
+        """
+        Method to kill a yarn application
+
+        Parameters
+        ----------
+        app_id: str
+            YARN application id
+
+        Returns
+        -------
+        bool:
+            True if successful, False otherwise.
+        """
+        return self.yarn_api.kill(app_id)
+
+    def status(self, app_id):
+        """ Get status of an application
+
+        Parameters
+        ----------
+        app_id: str
+             A yarn application ID string
+
+        Returns
+        -------
+        log: dictionary
+            status of application
+        """
+        return self.yarn_api.status(app_id)
+
+    @property
+    def apps(self):
+        return self.yarn_api.apps

@@ -26,6 +26,7 @@ See :doc:`the quickstart <quickstart>` to get started.
    :maxdepth: 1
 
    install
+   quickstart
    usage
    api
 
