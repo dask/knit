@@ -36,6 +36,8 @@ def test_port(k):
 def test_hostname(k):
     with pytest.raises(HDFSConfigException):
         Knit(nn="foobarbiz")
+    with pytest.raises(HDFSConfigException):
+        Knit(rm="foobarbiz")
 
     if inside_docker:
         # should pass without incident

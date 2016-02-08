@@ -10,7 +10,7 @@ from .utils import conf_find
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
-
+from .yarn_api import YARNAPI
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ JAR_FILE = "knit-1.0-SNAPSHOT.jar"
 JAVA_APP = "io.continuum.knit.Client"
 
 
-class Knit(object):
+class Knit(YARNAPI):
     """
     Connection to HDFS/YARN
 
@@ -59,6 +59,7 @@ class Knit(object):
             # validates IP/Port is correct
             self._hdfs_conf()
             self._yarn_conf()
+        super(Knit, self).__init__(rm, rm_port)
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
@@ -222,127 +223,6 @@ class Knit(object):
         appId = out.split()[-1].decode("utf-8")
         appId = re.sub('id', '', appId)
         return appId
-
-    def logs(self, app_id, shell=False):
-        """
-        Collect logs from each container
-
-        Parameters
-        ----------
-        app_id: str
-             A yarn application ID string
-        shell: bool
-             Shell out to yarn CLI (default False)
-
-        Returns
-        -------
-        log: dictionary
-            logs from each container
-        """
-
-        if shell:
-
-            args = ["yarn", "logs", "-applicationId", app_id]
-
-            proc = Popen(args, stdout=PIPE, stderr=PIPE)
-            out, err = proc.communicate()
-
-            logger.debug(out)
-            logger.debug(err)
-            return str(out)
-
-        host_port = "{}:{}".format(self.rm, self.rm_port)
-        url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
-        logger.debug("Getting Resource Manager Info: {}".format(url))
-        r = requests.get(url)
-        data = r.json()
-        logger.debug(data)
-
-        try:
-            amHostHttpAddress = data['app']['amHostHttpAddress']
-        except KeyError:
-            msg = "Local logs unavailable. State: {} finalStatus: {} Possibly check logs " \
-                  "with `yarn logs -applicationId`".format(data['app']['state'],
-                                                           data['app']['finalStatus'])
-            raise Exception(msg)
-
-        url = "http://{}/ws/v1/node/containers".format(amHostHttpAddress)
-        r = requests.get(url)
-        data = r.json()['containers']['container']
-        logger.debug(data)
-
-        # container_1452274436693_0001_01_000001
-        def get_app_id_num(x):
-            return "_".join(x.split("_")[1:3])
-
-        app_id_num = get_app_id_num(app_id)
-        containers = [d for d in data if get_app_id_num(d['id']) == app_id_num]
-
-        logs = {}
-        for c in containers:
-            log = {}
-            log['nodeId'] = c['nodeId']
-
-            # grab stdout
-            url = "{}/stdout/?start=0".format(c['containerLogsLink'])
-            logger.debug("Gather stdout/stderr data from {}: {}".format(c['nodeId'], url))
-            r = requests.get(url)
-            log['stdout'] = r.text
-
-            # grab stderr
-            url = "{}/stderr/?start=0".format(c['containerLogsLink'])
-            r = requests.get(url)
-            log['stderr'] = r.text
-
-            logs[c['id']] = log
-
-        return logs
-
-    def status(self, app_id):
-        """ Get status of an application
-
-        Parameters
-        ----------
-        app_id: str
-             A yarn application ID string
-
-        Returns
-        -------
-        log: dictionary
-            status of application
-        """
-        host_port = "{}:{}".format(self.rm, self.rm_port)
-        url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
-        logger.debug("Getting Application Info: {}".format(url))
-        r = requests.get(url)
-        data = r.json()
-
-        return data
-
-    def kill(self, application_id):
-        """
-        Method to kill a yarn application
-
-        Parameters
-        ----------
-        application_id: str
-            YARN applicaiton id
-
-        Returns
-        -------
-        bool:
-            True if successful, False otherwise.
-        """
-
-        args = ["yarn", "application", "-kill", application_id]
-
-        proc = Popen(args, stdout=PIPE, stderr=PIPE)
-        out, err = proc.communicate()
-
-        logger.debug(out)
-        logger.debug(err)
-
-        return any("Killed application" in s for s in [str(out), str(err)])
 
     @staticmethod
     def create_env(env_name, packages=None, conda_root=None, remove=False):
