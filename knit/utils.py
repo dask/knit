@@ -10,7 +10,7 @@ from .compatibility import urlparse
 
 format = ('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.basicConfig(format=format, level=logging.INFO)
-
+logging.getLogger("requests").setLevel(logging.WARNING)
 
 def set_logging(level):
     logger = logging.getLogger('knit')
@@ -83,11 +83,3 @@ def shell_out(cmd=None):
         result of shell command
     """
     return subprocess.check_output(cmd).decode('utf-8')
-
-
-# https://groups.google.com/forum/#!topic/comp.lang.python/HkB1uhDcvdk
-def inherit_docstring_from(cls):
-    def docstring_inheriting_decorator(fn):
-        fn.__doc__ = getattr(cls,fn.__name__).__doc__
-        return fn
-    return docstring_inheriting_decorator

@@ -6,7 +6,7 @@ import requests
 import logging
 from subprocess import Popen, PIPE
 
-from .utils import parse_xml, inherit_docstring_from
+from .utils import parse_xml
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException
@@ -238,14 +238,56 @@ class Knit(object):
 
         return path
 
-    @inherit_docstring_from(YARNAPI)
     def logs(self, app_id, shell=False):
-        self.yarn_api.logs(app_id, shell=shell)
+        """
+        Collect logs from RM (if running)
+        With shell=True, collect logs from HDFS after job completion
 
-    @inherit_docstring_from(YARNAPI)
+        Parameters
+        ----------
+        app_id: str
+             A yarn application ID string
+        shell: bool
+             Shell out to yarn CLI (default False)
+
+        Returns
+        -------
+        log: dictionary
+            logs from each container (when possible)
+        """
+        return self.yarn_api.logs(app_id, shell=shell)
+
     def kill(self, app_id):
-        self.yarn_api.kill(app_id)
+        """
+        Method to kill a yarn application
 
-    @inherit_docstring_from(YARNAPI)
-    def status(self, app_id, shell=False):
-        self.yarn_api.status(app_id, shell=shell)
+        Parameters
+        ----------
+        app_id: str
+            YARN application id
+
+        Returns
+        -------
+        bool:
+            True if successful, False otherwise.
+        """
+        return self.yarn_api.kill(app_id)
+
+    def status(self, app_id):
+        """ Get status of an application
+
+        Parameters
+        ----------
+        app_id: str
+             A yarn application ID string
+
+        Returns
+        -------
+        log: dictionary
+            status of application
+        """
+        return self.yarn_api.status(app_id)
+
+    @property
+    def apps(self):
+        return self.yarn_api.apps
