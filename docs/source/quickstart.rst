@@ -7,7 +7,7 @@ Install
 Use ``pip`` or ``conda`` to install::
 
    $ pip install knit --upgrade
-   $ conda install knit -c blaze
+   $ conda install knit -c dask
 
 Commands
 --------

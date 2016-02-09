@@ -6,7 +6,7 @@ Easy
 
 Use ``pip`` or ``conda`` to install::
 
-   $ conda install knit -c blaze
+   $ conda install knit -c dask
    or
    $ pip install knit --upgrade
 
@@ -28,6 +28,6 @@ Clone git repository and build maven project:
 
 .. code-block:: bash
 
-   $ git clone https://github.com/blaze/knit
+   $ git clone https://github.com/dask/knit
    $ cd knit
    $ python setup.py install mvn

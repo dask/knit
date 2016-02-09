@@ -11,7 +11,7 @@ View the documentation_ for ``knit``.
 .. _documentation: http://knit.readthedocs.org/en/latest/
 
 
-.. |Build Status| image:: https://travis-ci.org/blaze/knit.svg?branch=master
-   :target: https://travis-ci.org/blaze/knit
-.. |Coverage Status| image:: https://coveralls.io/repos/github/blaze/knit/badge.svg
-   :target: https://coveralls.io/github/blaze/knit
+.. |Build Status| image:: https://travis-ci.org/dask/knit.svg?branch=master
+   :target: https://travis-ci.org/dask/knit
+.. |Coverage Status| image:: https://coveralls.io/repos/github/dask/knit/badge.svg
+   :target: https://coveralls.io/github/dask/knit

@@ -81,7 +81,7 @@ We can also call out to the HADOOP jar directly::
         --help
               command line for launching distributed python
 
-   $ hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client --numInstances 1 \
+   $ hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client --numContainers 1 \
      --command "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
 
 

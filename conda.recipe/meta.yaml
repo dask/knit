@@ -14,6 +14,6 @@ requirements:
         - python
 
 about:
-  home: https://github.com/blaze/knit
+  home: https://github.com/dask/knit
   license: BSD
   summary: Python interface to Scala for interacting with YARN
