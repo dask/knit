@@ -122,11 +122,11 @@ def test_cmd_w_conda_env(k):
 
 cur_dir = os.path.dirname(__file__)
 txt_file = os.path.join(cur_dir, 'files', 'test_upload_file.txt')
-py_file = os.path.join(cur_dir, 'files', 'test_read_upload.py')
+py_file = os.path.join(cur_dir, 'files', 'read_uploaded.py')
 
 
 def test_file_uploading(k):
-    cmd = 'python ./test_read_upload.py'
+    cmd = 'python ./read_uploaded.py'
     with pytest.raises(KnitException):
         k.start(cmd, files='a,b,c')
 
