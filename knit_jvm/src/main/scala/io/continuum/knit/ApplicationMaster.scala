@@ -38,6 +38,7 @@ object ApplicationMaster {
     val shellCMD = parsedArgs.command
     val vCores = parsedArgs.virtualCores
     val mem = parsedArgs.memory
+    val files = parsedArgs.files
 
 
     val stagingDir = ".knitDeps"
@@ -95,7 +96,19 @@ object ApplicationMaster {
         val env = collection.mutable.Map[String, String]()
 
         //setup local resources
-        if (!pythonEnv.isEmpty) {
+        if (files.nonEmpty) {
+          for (file <- files) {
+            val name = file.getName
+            println(s"Pulling File: $name")
+            val localfile = Records.newRecord(classOf[LocalResource])
+            val HDFS_FILE_PATH = new Path(stagingDirPath, name).makeQualified(fs.getUri, fs.getWorkingDirectory)
+            setUpLocalResource(HDFS_FILE_PATH, localfile)
+            localResources(name) = localfile
+          }
+        }
+
+        //setup python resources
+        if (pythonEnv.nonEmpty) {
           val appMasterPython = Records.newRecord(classOf[LocalResource])
           val envFile = new java.io.File(pythonEnv)
           val envZip = envFile.getName

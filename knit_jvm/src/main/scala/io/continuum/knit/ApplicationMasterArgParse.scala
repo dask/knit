@@ -4,7 +4,8 @@ import java.io.File
 import scopt._
 
 case class AMConfig(numContainers: Int = 1, memory: Int = 300, virtualCores: Int = 1,
-                  command: String = "", pythonEnv: String = "", debug: Boolean = false)
+                    command: String = "", pythonEnv: String = "", files: Seq[File] = Seq(),
+                    debug: Boolean = false)
 
 object ApplicationMasterArguments {
   val parser = new scopt.OptionParser[AMConfig]("scopt") {
@@ -28,6 +29,10 @@ object ApplicationMasterArguments {
     opt[String]('p', "pythonEnv") action { (x, c) =>
       c.copy(pythonEnv = x)
     } text ("Number of YARN containers ")
+
+    opt[Seq[File]]('f', "files") valueName("<file1>,<file2>...") action { (x, c) =>
+      c.copy(files = x)
+    } text ("Optional files to include")
 
     opt[Unit]("debug") hidden() action { (_, c) =>
       c.copy(debug = true)
