@@ -116,9 +116,8 @@ object ApplicationMaster {
           val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
           setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
           // set up local ENV
-          env("PYTHON_BIN") = "./PYTHON_DIR/miniconda-env/bin/python"
-          env("CONDA_PREFIX") = "./PYTHON_DIR/miniconda-env/"
-
+          env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
+          env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
           localResources("PYTHON_DIR") = appMasterPython
         }
 

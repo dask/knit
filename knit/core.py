@@ -60,7 +60,7 @@ class Knit(object):
             self._hdfs_conf()
             self._yarn_conf()
 
-        self.yarn_api = YARNAPI(rm, rm_port)
+        self.yarn_api = YARNAPI(self.rm, self.rm_port)
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
