@@ -1,5 +1,8 @@
 package io.continuum.knit
 import java.io.File
+
+import scala.collection.mutable.ArraySeq
+
 import scopt._
 
 case class ClientConfig(numContainers: Int = 1, memory: Int = 300, virtualCores: Int = 1,
@@ -63,16 +66,16 @@ object ClientArguments {
           if (v)
             cmdSeq = cmdSeq :+ s" --$k $v "
         case v: List[_] =>
-          if (!v.isEmpty)
+          if (v.nonEmpty)
             cmdSeq = cmdSeq :+ s" --$k $v "
         case v: Map[_, _] =>
-          if (!v.isEmpty)
+          if (v.nonEmpty)
             cmdSeq = cmdSeq :+ s" --$k $v "
         case v: Seq[_] =>
-          if (!v.isEmpty)
-            cmdSeq = cmdSeq :+ s" --$k $v "
+          if (v.nonEmpty)
+            cmdSeq = cmdSeq :+ s" --$k ${v.mkString(",")} "
         case v: String =>
-          if (!v.isEmpty)
+          if (v.nonEmpty)
             cmdSeq = cmdSeq :+ s" --$k $v "
         case v: Int =>
           cmdSeq = cmdSeq :+ s" --$k $v "
