@@ -12,6 +12,7 @@ format = ('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.basicConfig(format=format, level=logging.INFO)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
+
 def set_logging(level):
     logger = logging.getLogger('knit')
     logger.setLevel(level)

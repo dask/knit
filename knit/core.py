@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE
 from .utils import parse_xml
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
-from .exceptions import HDFSConfigException
+from .exceptions import HDFSConfigException, KnitException
 from .yarn_api import YARNAPI
 
 logger = logging.getLogger(__name__)
@@ -157,7 +157,7 @@ class Knit(object):
 
         return conf
 
-    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env=""):
+    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="", files=None):
         """
         Method to start a yarn app with a distributed shell
 
@@ -180,6 +180,8 @@ class Knit(object):
             * The unit for memory is megabytes.
         env: string
             Full Path to zipped Python environment
+        files: list
+            list of files to be include in each container
 
         Returns
         -------
@@ -192,6 +194,11 @@ class Knit(object):
 
         if env:
             args = args + ["--pythonEnv", str(env)]
+        if files:
+            if not isinstance(files, list):
+                raise KnitException("File argument must be a list of strings")
+            f = ','.join(files)
+            args = args + ["--files", str(f)]
 
         logger.debug("Running Command: {}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)

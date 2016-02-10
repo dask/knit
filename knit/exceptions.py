@@ -8,3 +8,7 @@ class CondaException(Exception):
 
 class YARNException(Exception):
     pass
+
+
+class KnitException(Exception):
+    pass

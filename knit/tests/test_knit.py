@@ -4,7 +4,7 @@ import pytest
 import socket
 
 from knit import Knit
-from knit.exceptions import HDFSConfigException
+from knit.exceptions import HDFSConfigException, KnitException
 
 
 def check_docker():
@@ -120,6 +120,27 @@ def test_cmd_w_conda_env(k):
     logs = k.logs(appId, shell=True)
     assert "(2, 6, 9, 'final', 0)" in logs
 
+cur_dir = os.path.dirname(__file__)
+txt_file = os.path.join(cur_dir, 'files', 'test_upload_file.txt')
+py_file = os.path.join(cur_dir, 'files', 'test_read_upload.py')
+
+
+def test_file_uploading(k):
+    cmd = 'python ./test_read_upload.py'
+    with pytest.raises(KnitException):
+        k.start(cmd, files='a,b,c')
+
+    appId = k.start(cmd, files=[txt_file, py_file])
+
+    status = k.status(appId)
+    while status['app']['finalStatus'] != 'SUCCEEDED':
+        status = k.status(appId)
+        print(status['app']['finalStatus'])
+        time.sleep(2)
+
+    logs = k.logs(appId, shell=True)
+
+    assert "rambling on" in logs
 
 # temporarily removing test until vCore handling is better resolved in the core
 # def test_vcores(k):
