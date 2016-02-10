@@ -46,6 +46,7 @@ object Client extends Logging {
     val CMD = parsedArgs.command
     val vCores = parsedArgs.virtualCores
     val mem = parsedArgs.memory
+    val files = parsedArgs.files
 
     //TODO: Better processing of $ in CLI args
     //Expected only to be used with `python_env`
@@ -83,7 +84,18 @@ object Client extends Logging {
     env("KNIT_USER") = UserGroupInformation.getCurrentUser.getShortUserName
     env("KNIT_YARN_STAGING_DIR") = stagingDirPath.toString
 
-    if (!pythonEnv.isEmpty) {
+    if (files.nonEmpty) {
+      for (file <- files) {
+        uploadFile(file.getAbsolutePath)
+        val name = file.getName
+        val fileUpload = Records.newRecord(classOf[LocalResource])
+        val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name).makeQualified(fs.getUri, fs.getWorkingDirectory)
+        setUpLocalResource(HDFS_FILE_UPLOAD, fileUpload)
+      }
+    }
+
+
+    if (pythonEnv.nonEmpty) {
       //TODO: detect file suffix
       uploadFile(pythonEnv)
       val envFile = new java.io.File(pythonEnv)
