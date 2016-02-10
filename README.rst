@@ -13,5 +13,5 @@ View the documentation_ for ``knit``.
 
 .. |Build Status| image:: https://travis-ci.org/dask/knit.svg?branch=master
    :target: https://travis-ci.org/dask/knit
-.. |Coverage Status| image:: https://coveralls.io/repos/github/dask/knit/badge.svg
+.. |Coverage Status| image:: https://coveralls.io/repos/github/dask/knit/badge.svg 
    :target: https://coveralls.io/github/dask/knit

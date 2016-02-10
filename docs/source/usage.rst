@@ -8,7 +8,7 @@ interest develop.  Below are a few novels ways we can currently use ``Knit``
 Python
 ~~~~~~
 
-The example below use Python found in the $PATH setting.  This is usually the system Python.
+The example below use Python found in the ``$PATH``.  This is usually the system Python.
 
 .. code-block:: python
 
@@ -58,6 +58,16 @@ builds an environment ``env.zip`` with Python 3.5 and a variety of popular data 
    >>> env_zip = k.create_env(env_name='dev', packages=['python=3', 'distributed',
    ...                                                  'dask', 'pandas', 'scikit-learn'])
 
+Adding Files
+~~~~~~~~~~~~
+``Knit`` can also pass local files to each container.
+
+ .. code-block:: python
+ >>> files = ['creds.txt', 'data.csv']
+ >>> k.start(cmd, files=files)
+
+With the above, we are send files ``creds.txt`` and ``data.csv`` to each container and can reference
+them as local file paths in the ``cmd`` command.
 
 JVM CLI
 ~~~~~~~

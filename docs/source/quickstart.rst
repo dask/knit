@@ -26,7 +26,8 @@ in all YARN containers
    >>> k.start(cmd)
    'application_1454900586318_0004'
 
-``start`` also takes parameters: ``num_containers``, ``memory``, ``virtual_cores``, and ``env``
+``start`` also takes parameters: ``num_containers``, ``memory``,
+``virtual_cores``, ``env``, and ``files``
 
 Status
 ~~~~~~
