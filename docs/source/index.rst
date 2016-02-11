@@ -1,27 +1,54 @@
 knit
-========
+====
 
-``Knit`` is an easy to use interface for launching distributed applications with `YARN`_.  Additionally, it
-provides many conveniences for Python and other runtime languages.  Many YARN applications are
-nothing more than distributed shell commands -- the `Hello World`_ for YARN is running a Unix
-command on several nodes in a cluster.  ``knit`` implements a generalized distributed shell command
-and allows users to express those commands/applications, as well as desired resources managed under YARN
-through Python or directly on the command line.
+Knit enables data scientists to quickly launch, monitor, and destroy simple distributed programs on a YARN cluster.
+
+Many YARN applications are simple distributed shell commands -- running a shell command on several nodes in a cluster.
+Knit enables users to express and deploy applications and software environments managed under YARN through Python or
+directly on the command line.
+
+
+Motivation
+----------
+
+Knit was built to support batch-oriented non-JVM applications.  For example, Knit can deploy Python based distributed
+applications such as `IPython Parallel`_ and `Dask+Distributed`_.  Knit was built with the following motivations in
+mind:
+
+*  **Convenience:** Support the common case with easy to use CLI and Python interface
+*  **PyData Support** Bring PyData stack into the Hadoop/YARN ecosystem
+*  **Deployable Runtimes:** Build and ship self contained environments along with the application.  Knit uses `conda`_
+   to resolve library dependencies and deploy user libraries without IT infrastructure and management
+
+
+Scope
+-----
+
+Knit enables data scientists to quickly launch, monitor, and destroy simple distributed programs.
+
+Knit is not a full featured YARN solution.  Knit focuses on the common case in scientific workloads of starting a
+distributed process on many workers for a relatively short period of time.  Knit does not handle dynamic container
+management nor is it suitable for running long-term infrastructural applications.
+
 
 IPython Parallel Example
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Install `IPython Parallel`_ and start IP Controller::
+As an example we install and deploy the popular `IPython Parallel`_ project on a YARN cluster.  This example can be
+performed by anyone with user privileges on a YARN cluster and a local Python installation.  It does not depend on root
+privileges nor on Python being widely deployed throughout the cluster.
+
+We install and start the IP Controller on the local process::
 
    $ conda install ipyparallel
    or
-   $ pip ipyparallel
+   $ pip install ipyparallel
    $ ipcontroller --ip=*
 
 
-IPController will create a file: ``ipcontroller-engine.json`` which contains metadata and security information
+The IPController creates a file: ``ipcontroller-engine.json`` which contains metadata and security information
 needed by worker nodes to connect back to the controller.  In a separate shell or terminal we use knit to
-ship a self-contained environment with ``ipyparallel`` (and other dependenices) and start ``ipengine``
+ship a self-contained environment with ``ipyparallel`` (and other dependencies) and start ``ipengine``
 
 .. code-block:: python
 
@@ -42,26 +69,6 @@ IPython Parallel is now running in 3 containers on our YARN managed cluster:
    [2, 3, 4]
 
 
-Motivation
-----------
-
-``Knit`` is built to support batch-oriented non JVM based applications.  For example, Knit can
-deploy Python based distributed applications such as `Dask + Distributed`_ and `IPython Parallel`_
-
-*  **Convenience:** General purpose YARN applications with easy to use CLI and Python interface
-*  **PyData Support** Bring PyData stack into the Hadoop/YARN ecosystem
-*  **Deployable Runtimes:** Knit can build and ship self contained runtime environments.  This means
-   we can resolve library dependencies without significant IT infrastructure
-   and management
-
-Scope
------
-
-Knit enables data scientists to quickly launch, monitor, and destroy simple distributed programs.
-Knit is not yet a full featured YARN solution.  Knit focuses on the common case in scientific workloads of starting a
-distributed process on many workers for a relatively short period of time.  Knit does not
-handle dynamic container management nor is it suitable for running infrastructural applications.
-
 Related Work
 ------------
 
@@ -78,6 +85,7 @@ See :doc:`the quickstart <quickstart>` to get started.
 .. _`Apache Slider`: https://slider.incubator.apache.org/
 .. _`IPython Parallel`: https://ipython.org/ipython-doc/3/parallel/
 .. _`Dask + Distributed`: http://distributed.readthedocs.org/en/latest/
+.. _`conda`: http://conda.pydata.org/docs/
 
 .. toctree::
    :maxdepth: 1
@@ -87,5 +95,3 @@ See :doc:`the quickstart <quickstart>` to get started.
    usage
    examples
    api
-
-
