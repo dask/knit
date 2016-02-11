@@ -11,8 +11,8 @@ Install `Dask + Distributed` and start the ``dscheduler``::
     distributed.scheduler - INFO - Start Scheduler at:         172.31.54.49:8786
     distributed.scheduler - INFO -            http at:         172.31.54.49:49616
 
-The scheduler is now await worker to connect to it.  We can now ask knit to run
-the ``dworker`` command giving it a specific IP:Port to connect to.
+The scheduler now awaits workers to connect to it.  Knit runs
+the ``dworker`` command with a specific IP:Port to connect to.
 
 .. code-block:: python
 

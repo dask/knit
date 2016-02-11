@@ -1,7 +1,7 @@
 knit
 ====
 
-Knit enables data scientists to quickly launch, monitor, and destroy simple distributed programs on a YARN cluster.
+Knit enables data scientists to quickly launch, monitor, and destroy distributed programs on a YARN cluster.
 
 Many YARN applications are simple distributed shell commands -- running a shell command on several nodes in a cluster.
 Knit enables users to express and deploy applications and software environments managed under YARN through Python or
@@ -15,8 +15,8 @@ Knit was built to support batch-oriented non-JVM applications.  For example, Kni
 applications such as `IPython Parallel`_ and `Dask+Distributed`_.  Knit was built with the following motivations in
 mind:
 
-*  **Convenience:** Support the common case with easy to use CLI and Python interface
-*  **PyData Support** Bring PyData stack into the Hadoop/YARN ecosystem
+*  **PyData Support** Bring the PyData stack into the Hadoop/YARN ecosystem
+*  **Easy Setup:** Support a minimal installation effort and the common cases with easy to use CLI and Python interface.
 *  **Deployable Runtimes:** Build and ship self contained environments along with the application.  Knit uses `conda`_
    to resolve library dependencies and deploy user libraries without IT infrastructure and management
 
@@ -38,7 +38,7 @@ As an example we install and deploy the popular `IPython Parallel`_ project on a
 performed by anyone with user privileges on a YARN cluster and a local Python installation.  It does not depend on root
 privileges nor on Python being widely deployed throughout the cluster.
 
-We install and start the IP Controller on the local process::
+We install and start the IP Controller on the head node::
 
    $ conda install ipyparallel
    or
@@ -48,7 +48,7 @@ We install and start the IP Controller on the local process::
 
 The IPController creates a file: ``ipcontroller-engine.json`` which contains metadata and security information
 needed by worker nodes to connect back to the controller.  In a separate shell or terminal we use knit to
-ship a self-contained environment with ``ipyparallel`` (and other dependencies) and start ``ipengine``
+ship a self-contained environment with ``ipyparallel`` (plus other dependencies) and start ``ipengine``
 
 .. code-block:: python
 
@@ -73,7 +73,7 @@ Related Work
 ------------
 
 * `Apache Slider`_: General purpose YARN application with a focus on long-running applications/services:
-   HBase, Accumulo, etc.
+  HBase, Accumulo, etc.
 * kitten_: General purpose YARN application with Lua based configuration
 
 See :doc:`the quickstart <quickstart>` to get started.
