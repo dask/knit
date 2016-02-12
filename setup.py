@@ -14,6 +14,9 @@ import versioneer
 JAVA_SRC = "knit_jvm"
 jar_file = os.path.join(JAVA_SRC,"target", "knit-1.0-SNAPSHOT.jar")
 
+with open('requirements.txt') as f:
+    requires = f.read().splitlines()
+
 if 'mvn' in sys.argv:
 
     # JAVA_HOME necessary for building
@@ -43,7 +46,7 @@ setup(name='knit',
       keywords='yarn',
       packages=['knit'],
       package_data={'knit': ['java_libs/knit-1.0-SNAPSHOT.jar']},
-      install_requires=[],
+      install_requires=requires,
       long_description=(open('README.rst').read() if os.path.exists('README.rst')
                         else ''),
       zip_safe=False)
