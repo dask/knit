@@ -10,4 +10,4 @@ elif [[ $unamestr == 'Darwin' ]]; then
    export JAVA_HOME=$(/usr/libexec/java_home)
 fi
 java -version
-$PYTHON setup.py install mvn
+$PYTHON setup.py install mvn --single-version-externally-managed --record=/tmp/record.txt

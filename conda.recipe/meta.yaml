@@ -12,6 +12,8 @@ requirements:
         - java-jdk [linux]
     run:
         - python
+        - lxml
+        - requests
 
 about:
   home: https://github.com/dask/knit
