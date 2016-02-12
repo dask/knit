@@ -8,3 +8,4 @@ include README.rst
 include MANIFEST.in
 include versioneer.py
 include knit/_version.py
+include requirements.txt
