@@ -2,11 +2,10 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import logging
-import subprocess
 
 from lxml import etree
 
-from .compatibility import urlparse
+from .compatibility import urlparse, check_output
 
 format = ('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logging.basicConfig(format=format, level=logging.INFO)
@@ -24,12 +23,20 @@ def parse_xml(f, search_string=''):
     if url:
         u = urlparse(url)
 
-        # handle host:port with no :// preabmle
-        if u.path == url:
-            conf['host'], conf['port'] = url.split(':')
-        else:
+        # if we have a hostname and port, lets use that
+        if u.hostname and u.port:
             conf['host'] = u.hostname
             conf['port'] = u.port
+
+        # if not, assume bad things
+        else:
+            if ":" in url:
+                conf['host'], conf['port'] = url.split(':')
+                conf['port'] = int(conf['port'])
+            else:
+                conf['host'] = url
+                conf['port'] = 80
+
     return conf
 
 
@@ -61,7 +68,7 @@ def conf_find(fp='', name=''):
 
     """
     tree = etree.parse(fp)
-    elem = tree.xpath("./property[descendant::text()='{}']".format(name))
+    elem = tree.xpath("./property[descendant::text()='{0}']".format(name))
     try:
         hdfs_url = elem[0]
         return hdfs_url.find('value').text
@@ -83,4 +90,4 @@ def shell_out(cmd=None):
     result : str
         result of shell command
     """
-    return subprocess.check_output(cmd).decode('utf-8')
+    return check_output(cmd).decode('utf-8')

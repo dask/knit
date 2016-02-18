@@ -17,7 +17,7 @@ def check_app_id(func):
         cls = args[0]
         app_id = args[1]
         if app_id not in cls.apps:
-            raise YARNException("{}: not a valid Application "
+            raise YARNException("{0}: not a valid Application "
                                 "Id".format(app_id))
         return func(*args, **kwargs)
     return wrapper
@@ -27,13 +27,13 @@ class YARNAPI(object):
     def __init__(self, rm, rm_port):
         self.rm = rm
         self.rm_port = rm_port
-        self.host_port = "{}:{}".format(self.rm, self.rm_port)
+        self.host_port = "{0}:{1}".format(self.rm, self.rm_port)
 
 
     @property
     def apps(self):
-        url = "http://{}/ws/v1/cluster/apps/".format(self.host_port)
-        logger.debug("Getting Resource Manager Info: {}".format(url))
+        url = "http://{0}/ws/v1/cluster/apps/".format(self.host_port)
+        logger.debug("Getting Resource Manager Info: {0}".format(url))
         r = requests.get(url)
         data = r.json()
         logger.debug(data)
@@ -68,9 +68,9 @@ class YARNAPI(object):
             out = shell_out(cmd)
             return str(out)
 
-        host_port = "{}:{}".format(self.rm, self.rm_port)
-        url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
-        logger.debug("Getting Resource Manager Info: {}".format(url))
+        host_port = "{0}:{1}".format(self.rm, self.rm_port)
+        url = "http://{0}/ws/v1/cluster/apps/{1}".format(host_port, app_id)
+        logger.debug("Getting Resource Manager Info: {0}".format(url))
         r = requests.get(url)
         data = r.json()
         logger.debug(data)
@@ -78,12 +78,12 @@ class YARNAPI(object):
         try:
             amHostHttpAddress = data['app']['amHostHttpAddress']
         except KeyError:
-            msg = "Local logs unavailable. State: {} finalStatus: {} Possibly check logs " \
+            msg = "Local logs unavailable. State: {0} finalStatus: {1} Possibly check logs " \
                   "with `yarn logs -applicationId`".format(data['app']['state'],
                                                            data['app']['finalStatus'])
             raise Exception(msg)
 
-        url = "http://{}/ws/v1/node/containers".format(amHostHttpAddress)
+        url = "http://{0}/ws/v1/node/containers".format(amHostHttpAddress)
         r = requests.get(url)
 
         data = r.json()['containers']
@@ -105,13 +105,13 @@ class YARNAPI(object):
             log=dict(nodeId=c['nodeId'])
 
             # grab stdout
-            url = "{}/stdout/?start=0".format(c['containerLogsLink'])
-            logger.debug("Gather stdout/stderr data from {}: {}".format(c['nodeId'], url))
+            url = "{0}/stdout/?start=0".format(c['containerLogsLink'])
+            logger.debug("Gather stdout/stderr data from {0}: {1}".format(c['nodeId'], url))
             r = requests.get(url)
             log['stdout'] = r.text
 
             # grab stderr
-            url = "{}/stderr/?start=0".format(c['containerLogsLink'])
+            url = "{0}/stderr/?start=0".format(c['containerLogsLink'])
             r = requests.get(url)
             log['stderr'] = r.text
 
@@ -133,9 +133,9 @@ class YARNAPI(object):
         log: dictionary
             status of application
         """
-        host_port = "{}:{}".format(self.rm, self.rm_port)
-        url = "http://{}/ws/v1/cluster/apps/{}".format(host_port, app_id)
-        logger.debug("Getting Application Info: {}".format(url))
+        host_port = "{0}:{1}".format(self.rm, self.rm_port)
+        url = "http://{0}/ws/v1/cluster/apps/{1}".format(host_port, app_id)
+        logger.debug("Getting Application Info: {0}".format(url))
         r = requests.get(url)
         data = r.json()
 

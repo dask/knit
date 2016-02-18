@@ -43,8 +43,11 @@ def test_full_create(c):
     assert os.path.getsize(env_zip) > 500000 # ensures zipfile has non-0 size
     assert zipfile.is_zipfile(env_zip)
 
-    with zipfile.ZipFile(env_zip, 'r') as f:
+    f = zipfile.ZipFile(env_zip, 'r')
+    try:
         assert f.getinfo('test_env/bin/python')
+    finally:
+        f.close()
 
 
 def test_find_env(c):

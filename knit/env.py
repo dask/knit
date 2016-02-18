@@ -6,7 +6,7 @@ import shutil
 import requests
 import logging
 import zipfile
-from subprocess import Popen, PIPE, check_output
+from subprocess import Popen, PIPE
 
 from .exceptions import CondaException
 from .utils import shell_out
@@ -83,10 +83,10 @@ class CondaCreator(object):
         if self.miniconda_check:
             return self.conda_root
 
-        install_cmd = "bash {} -b -p {}".format(self.minifile_fp, self.conda_root).split()
+        install_cmd = "bash {0} -b -p {1}".format(self.minifile_fp, self.conda_root).split()
 
         self._download_miniconda()
-        logger.debug("Installing Miniconda in {}".format(self.conda_root))
+        logger.debug("Installing Miniconda in {0}".format(self.conda_root))
 
         proc = Popen(install_cmd, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate()
@@ -128,7 +128,7 @@ class CondaCreator(object):
                 return env_path
 
             if not remove:
-                raise CondaException("Conda environment: {} already exists".format(env_name))
+                raise CondaException("Conda environment: {0} already exists".format(env_name))
             else:
                 shutil.rmtree(env_path)
 
@@ -136,7 +136,7 @@ class CondaCreator(object):
             raise TypeError("Packages must be a list of strings")
 
         cmd = [self.conda_bin, 'create', '-p', env_path, '--copy', '-y', '-q'] + packages
-        logger.info("Creating new env {}".format(env_name))
+        logger.info("Creating new env {0}".format(env_name))
         logger.info(' '.join(cmd))
 
         proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
@@ -212,11 +212,16 @@ class CondaCreator(object):
         fname = os.path.basename(env_path) + '.zip'
         env_dir = os.path.dirname(env_path)
         zFile = os.path.join(env_dir, fname)
-
-        with zipfile.ZipFile(zFile, 'w') as f:
+        
+        # ZipFile does not have a contextmanager in Python 2.6
+        f = zipfile.ZipFile(zFile, 'w')
+        try:
             for root, dirs, files in os.walk(env_path):
                 for file in files:
                     relfile = os.path.join(os.path.relpath(root, self.conda_envs), file)
                     absfile = os.path.join(root, file)
                     f.write(absfile, relfile)
-        return zFile
+            return zFile
+
+        finally:
+            f.close()
