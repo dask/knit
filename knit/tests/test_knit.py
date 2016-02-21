@@ -121,7 +121,7 @@ def test_cmd_w_conda_env(k):
     assert "(2, 6, 9, 'final', 0)" in logs
 
 cur_dir = os.path.dirname(__file__)
-txt_file = os.path.join(cur_dir, 'files', 'test_upload_file.txt')
+txt_file = os.path.join(cur_dir, 'files', 'upload_file.txt')
 py_file = os.path.join(cur_dir, 'files', 'read_uploaded.py')
 
 
