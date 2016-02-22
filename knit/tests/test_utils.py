@@ -15,10 +15,15 @@ inside_docker = check_docker
 
 
 def test_conf_parse():
-    assert 'hdfs://knit-host:9000' == conf_find(core_site, 'fs.defaultFS')
     assert '' == conf_find(core_site, 'FOO/BAR')
+
+    assert 'hdfs://knit-host:9000' == conf_find(core_site, 'fs.defaultFS')
+    conf = parse_xml(core_site, 'fs.defaultFS')
+    assert conf == {'port': 9000, 'host': 'knit-host'}
+
+    assert 'knit-host:8088' == conf_find(yarn_site, 'yarn.resourcemanager.webapp.address')
     conf = parse_xml(yarn_site, 'yarn.resourcemanager.webapp.address')
-    assert conf == {'port': '8088', 'host': 'knit-host'}
+    assert conf == {'port': 8088, 'host': 'knit-host'}
 
 
 def test_set_logging():

@@ -1,6 +1,7 @@
 language: python
 
 python:
+  - 2.6
   - 2.7
   - 3.5
 
@@ -18,11 +19,15 @@ before_install:
   - chmod +x docker-compose
   - sudo mv docker-compose /usr/local/bin
   - pwd
-  - echo $PYTHON_VERSION
+  - echo $TRAVIS_PYTHON_VERSION
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       export DOCKER_ENV=/opt/anaconda;
     else
-      export DOCKER_ENV=/opt/anaconda/envs/py3;
+      if [[ "$TRAVIS_PYTHON_VERSION" == "2.6" ]]; then
+        export DOCKER_ENV=/opt/anaconda/envs/py26;
+      else
+        export DOCKER_ENV=/opt/anaconda/envs/py3;
+      fi
     fi
   - pushd continuous_integration
   - docker-compose up -d
@@ -36,7 +41,8 @@ install:
 
 script:
   - pwd
-  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
+  - echo $DOCKER_ENV
+  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh $DOCKER_ENV
 
 after_success:
   - docker exec -it $CONTAINER_ID bash -c "export TRAVIS=$TRAVIS && export TRAVIS_JOB_ID=$TRAVIS_JOB_ID && TRAVIS_BRANCH=$TRAVIS_BRANCH && /knit/continuous_integration/coverage_upload.sh"

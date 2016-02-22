@@ -69,7 +69,7 @@ class Knit(object):
         os.environ['KNIT_HOME'] = self.KNIT_HOME
 
     def __str__(self):
-        return "Knit<NN={}:{};RM={}:{}>".format(self.nn, self.nn_port,
+        return "Knit<NN={0}:{1};RM={2}:{3}>".format(self.nn, self.nn_port,
                                                      self.rm, self.rm_port)
 
     __repr__ = __str__
@@ -108,11 +108,11 @@ class Knit(object):
             return conf['host'], conf['port']
 
         if self.rm != conf['host']:
-            msg = "Possible Resource Manager hostname mismatch.  Detected {}".format(conf['host'])
+            msg = "Possible Resource Manager hostname mismatch.  Detected {0}".format(conf['host'])
             raise HDFSConfigException(msg)
 
         if str(self.rm_port) != str(conf['port']):
-            msg = "Possible Resource Manager port mismatch.  Detected {}".format(conf['port'])
+            msg = "Possible Resource Manager port mismatch.  Detected {0}".format(conf['port'])
             raise HDFSConfigException(msg)
 
         return conf
@@ -148,11 +148,11 @@ class Knit(object):
             return conf['host'], conf['port']
 
         if self.nn != conf['host']:
-            msg = "Possible Namenode hostname mismatch.  Detected {}".format(conf['host'])
+            msg = "Possible Namenode hostname mismatch.  Detected {0}".format(conf['host'])
             raise HDFSConfigException(msg)
 
         if str(self.nn_port) != str(conf['port']):
-            msg = "Possible Namenode port mismatch.  Detected {}".format(conf['port'])
+            msg = "Possible Namenode port mismatch.  Detected {0}".format(conf['port'])
             raise HDFSConfigException(msg)
 
         return conf
@@ -200,7 +200,7 @@ class Knit(object):
             f = ','.join(files)
             args = args + ["--files", str(f)]
 
-        logger.debug("Running Command: {}".format(' '.join(args)))
+        logger.debug("Running Command: {0}".format(' '.join(args)))
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate()
 
