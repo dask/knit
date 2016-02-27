@@ -7,7 +7,8 @@ import scopt._
 
 case class ClientConfig(numContainers: Int = 1, memory: Int = 300, virtualCores: Int = 1,
                         command: String = "", pythonEnv: String = "", files: Seq[File] = Seq(),
-                        debug: Boolean = false)
+                        debug: Boolean = false, queue: String = "default", 
+                        appName: String = "knit")
 
 object ClientArguments {
   val parser = new scopt.OptionParser[ClientConfig]("scopt") {
@@ -39,6 +40,15 @@ object ClientArguments {
     opt[Unit]("debug") hidden() action { (_, c) =>
       c.copy(debug = true)
     } text ("this option is hidden in the usage text")
+    
+    opt[String]('q', "queue") action { (x, c) =>
+      c.copy(queue = x)
+    } text ("RM Queue to use while scheduling")
+
+    opt[String]('N', "appName") action { (x, c) =>
+      c.copy(appName = x)
+    } text ("Application name")
+
 
     help("help") text ("command line for launching distributed python")
 
@@ -53,14 +63,18 @@ object ClientArguments {
   def ApplicationMasterCMD(config: ClientConfig): String = {
 
     var cmdSeq = Seq.empty[String]
-
+    val clientOnlyConfig = List("queue", "appName")
+    
     //generate list of tuples from Config CLI parser
-    val fields = (Map[String, Any]() /: config.getClass.getDeclaredFields) { (a, f) =>
+    val fields = config.getClass.getDeclaredFields
+      .filter(f => !clientOnlyConfig.contains(f.getName))
+    
+    val amFields = (Map[String, Any]() /: fields) { (a, f) =>
       f.setAccessible(true)
       a + (f.getName -> f.get(config))
     }
 
-    fields.foreach { case (k, v) =>
+    amFields.foreach { case (k, v) =>
       v match {
         case v: Boolean =>
           if (v)
