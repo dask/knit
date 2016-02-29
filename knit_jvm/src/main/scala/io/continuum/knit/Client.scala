@@ -47,6 +47,8 @@ object Client extends Logging {
     val vCores = parsedArgs.virtualCores
     val mem = parsedArgs.memory
     val files = parsedArgs.files
+    val appName = parsedArgs.appName
+    val queue = parsedArgs.queue
 
     //TODO: Better processing of $ in CLI args
     //Expected only to be used with `python_env`
@@ -140,10 +142,10 @@ object Client extends Logging {
 
     //context to launch
     val appContext = app.getApplicationSubmissionContext
-    appContext.setApplicationName("knit")
+    appContext.setApplicationName(appName)
     appContext.setAMContainerSpec(amContainer)
     appContext.setResource(resource)
-    appContext.setQueue("default")
+    appContext.setQueue(queue)
 
     //submit the application
     val appId = appContext.getApplicationId

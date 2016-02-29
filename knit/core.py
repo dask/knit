@@ -157,7 +157,8 @@ class Knit(object):
 
         return conf
 
-    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="", files=None):
+    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
+              files=None, app_name="knit", queue="default"):
         """
         Method to start a yarn app with a distributed shell
 
@@ -182,6 +183,10 @@ class Knit(object):
             Full Path to zipped Python environment
         files: list
             list of files to be include in each container
+        app_name: String
+            Application name shown in YARN (default: "knit")
+        queue: String
+            RM Queue to use while scheduling (default: "default")
 
         Returns
         -------
@@ -190,7 +195,8 @@ class Knit(object):
         """
 
         args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numContainers", str(num_containers),
-                "--command", cmd, "--virtualCores", str(virtual_cores), "--memory", str(memory)]
+                "--command", cmd, "--virtualCores", str(virtual_cores), "--memory", str(memory),
+                "--appName", app_name, "--queue", queue]
 
         if env:
             args = args + ["--pythonEnv", str(env)]
