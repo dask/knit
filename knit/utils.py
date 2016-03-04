@@ -76,7 +76,7 @@ def conf_find(fp='', name=''):
         return ''
 
 
-def shell_out(cmd=None):
+def shell_out(cmd=None, **kwargs):
     """
     Thin layer on check_output to return data as strings
 
@@ -84,10 +84,12 @@ def shell_out(cmd=None):
     ----------
     cmd : list
         command to run
+    kwargs:
+        passed directly to check_output
 
     Returns
     -------
     result : str
         result of shell command
     """
-    return check_output(cmd).decode('utf-8')
+    return check_output(cmd, **kwargs).decode('utf-8')
