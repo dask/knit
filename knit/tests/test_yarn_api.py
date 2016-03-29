@@ -3,8 +3,7 @@ import time
 import pytest
 import socket
 
-from knit import Knit
-from knit.yarn_api import check_app_id
+from knit.yarn_api import YARNAPI, check_app_id
 from knit.exceptions import YARNException
 
 
@@ -16,42 +15,25 @@ inside_docker = check_docker
 
 
 @pytest.yield_fixture
-def k():
-    knitter = Knit()
-    yield knitter
+def y():
+    yarnapi = YARNAPI("localhost", 8088)
+    yield yarnapi
 
 
-def test_decorator(k):
+def test_decorator(y):
     with pytest.raises(YARNException):
         def func(cls, app_id):
             return "TEST"
 
         wrapped = check_app_id(func)
-        wrapped(k, "invalid_app_id_555")
+        wrapped(y, "invalid_app_id_555")
 
 
-def test_logs(k):
+def test_logs(y):
     with pytest.raises(YARNException):
-        k.logs("invalid_app_id_555")
+        y.logs("invalid_app_id_555")
 
-    apps = k.apps
+    apps = y.apps
     appId = apps[-1]
-    with pytest.raises(YARNException):
-        k.logs(appId)
 
-    assert k.logs(appId, shell=True)
-
-
-def test_kill_status(k):
-    cmd = "sleep 10"
-    app_id = k.start(cmd, num_containers=1)
-
-    status = k.status(app_id)
-    while status['app']['state'] != 'RUNNING':
-        status = k.status(app_id)
-        time.sleep(1)
-    assert k.kill(app_id)
-
-    status = k.status(app_id)
-    assert status['app']['state'] == 'KILLED'
-
+    y.logs(appId)

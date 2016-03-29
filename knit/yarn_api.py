@@ -4,7 +4,7 @@ import os
 import requests
 import logging
 from functools import wraps
-from subprocess import Popen, PIPE
+from subprocess import STDOUT
 
 from .utils import shell_out
 from .exceptions import YARNException
@@ -60,64 +60,62 @@ class YARNAPI(object):
         log: dictionary
             logs from each container (when possible)
         """
+        if not shell:
+            try:
+                host_port = "{0}:{1}".format(self.rm, self.rm_port)
+                url = "http://{0}/ws/v1/cluster/apps/{1}".format(host_port, app_id)
 
-        if shell:
+                logger.debug("Getting Resource Manager Info: {0}".format(url))
+                r = requests.get(url)
+                data = r.json()
+                logger.debug(data)
 
-            cmd = ["yarn", "logs", "-applicationId", app_id]
+                amHostHttpAddress = data['app']['amHostHttpAddress']
 
-            out = shell_out(cmd)
-            return str(out)
+                url = "http://{0}/ws/v1/node/containers".format(amHostHttpAddress)
+                r = requests.get(url)
 
-        host_port = "{0}:{1}".format(self.rm, self.rm_port)
-        url = "http://{0}/ws/v1/cluster/apps/{1}".format(host_port, app_id)
-        logger.debug("Getting Resource Manager Info: {0}".format(url))
-        r = requests.get(url)
-        data = r.json()
-        logger.debug(data)
+                data = r.json()['containers']
+                if not data:
+                    raise YARNException("No container logs available")
 
-        try:
-            amHostHttpAddress = data['app']['amHostHttpAddress']
-        except KeyError:
-            msg = "Local logs unavailable. State: {0} finalStatus: {1} Possibly check logs " \
-                  "with `yarn logs -applicationId`".format(data['app']['state'],
-                                                           data['app']['finalStatus'])
-            raise Exception(msg)
+                container = data['container']
+                logger.debug(container)
 
-        url = "http://{0}/ws/v1/node/containers".format(amHostHttpAddress)
-        r = requests.get(url)
+                # container_1452274436693_0001_01_000001
+                def get_app_id_num(x):
+                    return "_".join(x.split("_")[1:3])
 
-        data = r.json()['containers']
-        if not data:
-            raise YARNException("No container logs available")
+                app_id_num = get_app_id_num(app_id)
+                containers = [d for d in container if get_app_id_num(d['id']) == app_id_num]
 
-        container = data['container']
-        logger.debug(container)
+                logs = {}
+                for c in containers:
+                    log = dict(nodeId=c['nodeId'])
 
-        # container_1452274436693_0001_01_000001
-        def get_app_id_num(x):
-            return "_".join(x.split("_")[1:3])
+                    # grab stdout
+                    url = "{0}/stdout/?start=0".format(c['containerLogsLink'])
+                    logger.debug("Gather stdout/stderr data from {0}: {1}".format(c['nodeId'], url))
+                    r = requests.get(url)
+                    log['stdout'] = r.text
 
-        app_id_num = get_app_id_num(app_id)
-        containers = [d for d in container if get_app_id_num(d['id']) == app_id_num]
+                    # grab stderr
+                    url = "{0}/stderr/?start=0".format(c['containerLogsLink'])
+                    r = requests.get(url)
+                    log['stderr'] = r.text
 
-        logs = {}
-        for c in containers:
-            log=dict(nodeId=c['nodeId'])
+                    logs[c['id']] = log
 
-            # grab stdout
-            url = "{0}/stdout/?start=0".format(c['containerLogsLink'])
-            logger.debug("Gather stdout/stderr data from {0}: {1}".format(c['nodeId'], url))
-            r = requests.get(url)
-            log['stdout'] = r.text
+                return logs
 
-            # grab stderr
-            url = "{0}/stderr/?start=0".format(c['containerLogsLink'])
-            r = requests.get(url)
-            log['stderr'] = r.text
+            except Exception:
+                logger.warn("Error while attempting to fetch logs, using fallback", exc_info=1)
 
-            logs[c['id']] = log
+        # fallback
+        cmd = ["yarn", "logs", "-applicationId", app_id]
+        out = shell_out(cmd)
+        return str(out)
 
-        return logs
 
     @check_app_id
     def status(self, app_id):
@@ -158,12 +156,6 @@ class YARNAPI(object):
         """
 
         cmd = ["yarn", "application", "-kill", app_id]
+        out = shell_out(cmd, stderr=STDOUT)
 
-        # need Popen because YARN killed message occurs on stderr
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
-        out, err = proc.communicate()
-
-        logger.debug(out)
-        logger.debug(err)
-
-        return any("Killed application" in s for s in [str(out), str(err)])
+        return "Killed application" in out

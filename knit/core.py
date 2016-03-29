@@ -4,7 +4,14 @@ import os
 import re
 import requests
 import logging
+import socket
+import atexit
+import select
+import signal
+import platform
 from subprocess import Popen, PIPE
+import struct
+import time
 
 from .utils import parse_xml
 from .env import CondaCreator
@@ -12,10 +19,20 @@ from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException, KnitException
 from .yarn_api import YARNAPI
 
+from py4j.protocol import Py4JError
+from py4j.java_gateway import JavaGateway, GatewayClient
+
 logger = logging.getLogger(__name__)
 
 JAR_FILE = "knit-1.0-SNAPSHOT.jar"
 JAVA_APP = "io.continuum.knit.Client"
+
+
+def read_int(stream):
+    length = stream.read(4)
+    if not length:
+        raise EOFError
+    return struct.unpack("!i", length)[0]
 
 
 class Knit(object):
@@ -67,6 +84,10 @@ class Knit(object):
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
+        
+        self.client = None
+        self.master = None
+        self.app_id = None
 
     def __str__(self):
         return "Knit<NN={0}:{1};RM={2}:{3}>".format(self.nn, self.nn_port,
@@ -158,7 +179,7 @@ class Knit(object):
         return conf
 
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
-              files=None, app_name="knit", queue="default"):
+              files=[], app_name="knit", queue="default"):
         """
         Method to start a yarn app with a distributed shell
 
@@ -193,32 +214,104 @@ class Knit(object):
         applicationId: str
             A yarn application ID string
         """
-
-        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--numContainers", str(num_containers),
-                "--command", cmd, "--virtualCores", str(virtual_cores), "--memory", str(memory),
-                "--appName", app_name, "--queue", queue]
-
-        if env:
-            args = args + ["--pythonEnv", str(env)]
+        if not isinstance(memory, int):
+            raise KnitException("Memory argument must be an integer")
         if files:
             if not isinstance(files, list):
                 raise KnitException("File argument must be a list of strings")
-            f = ','.join(files)
-            args = args + ["--files", str(f)]
 
-        logger.debug("Running Command: {0}".format(' '.join(args)))
-        proc = Popen(args, stdout=PIPE, stderr=PIPE)
-        out, err = proc.communicate()
+        # From https://github.com/apache/spark/blob/d83c2f9f0b08d6d5d369d9fae04cdb15448e7f0d/python/pyspark/java_gateway.py
+        # thank you spark
 
-        logger.debug(out)
-        logger.debug(err)
+        # Start a socket that will be used by PythonGatewayServer to communicate its port to us
+        callback_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        callback_socket.bind(('127.0.0.1', 0))
+        callback_socket.listen(1)
+        callback_host, callback_port = callback_socket.getsockname()
 
-        # last string in out is applicationId
-        # TODO Better JAVA Python communcation: appId, Resources, Yarn, etc.
+        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--callbackHost", str(callback_host),
+                "--callbackPort", str(callback_port)]
+        
+        on_windows = platform.system() == "Windows"
 
-        appId = out.split()[-1].decode("utf-8")
-        appId = re.sub('id', '', appId)
-        return appId
+        # Launch the Java gateway.
+        # We open a pipe to stdin so that the Java gateway can die when the pipe is broken
+        if not on_windows:
+            # Don't send ctrl-c / SIGINT to the Java gateway:
+            def preexec_func():
+                signal.signal(signal.SIGINT, signal.SIG_IGN)
+            proc = Popen(args, stdin=PIPE, preexec_fn=preexec_func)
+        else:
+            # preexec_fn not supported on Windows
+            proc = Popen(args, stdin=PIPE)
+
+        gateway_port = None
+        # We use select() here in order to avoid blocking indefinitely if the subprocess dies
+        # before connecting
+        while gateway_port is None and proc.poll() is None:
+            timeout = 1  # (seconds)
+            readable, _, _ = select.select([callback_socket], [], [], timeout)
+            if callback_socket in readable:
+                gateway_connection = callback_socket.accept()[0]
+                # Determine which ephemeral port the server started on:
+                gateway_port = read_int(gateway_connection.makefile(mode="rb"))
+                gateway_connection.close()
+                callback_socket.close()
+
+        if gateway_port is None:
+            raise Exception("Java gateway process exited before sending the driver its port number")
+
+        # In Windows, ensure the Java child processes do not linger after Python has exited.
+        # In UNIX-based systems, the child process can kill itself on broken pipe (i.e. when
+        # the parent process' stdin sends an EOF). In Windows, however, this is not possible
+        # because java.lang.Process reads directly from the parent process' stdin, contending
+        # with any opportunity to read an EOF from the parent. Note that this is only best
+        # effort and will not take effect if the python process is violently terminated.
+        if on_windows:
+            # In Windows, the child process here is "spark-submit.cmd", not the JVM itself
+            # (because the UNIX "exec" command is not available). This means we cannot simply
+            # call proc.kill(), which kills only the "spark-submit.cmd" process but not the
+            # JVMs. Instead, we use "taskkill" with the tree-kill option "/t" to terminate all
+            # child processes in the tree (http://technet.microsoft.com/en-us/library/bb491009.aspx)
+            def killChild():
+                Popen(["cmd", "/c", "taskkill", "/f", "/t", "/pid", str(proc.pid)])
+            atexit.register(killChild)
+
+        gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
+        self.client = gateway.entry_point
+        self.app_id = self.client.start(env, ','.join(files), app_name, queue)
+
+        master_rpcport = -1
+        while master_rpcport == -1:
+            master_rpcport = self.client.masterRPCPort()
+            time.sleep(0.2)
+        master_rpchost = self.client.masterRPCHost()
+
+        gateway = JavaGateway(GatewayClient(address=master_rpchost, port=master_rpcport), auto_convert=True)
+        self.master = gateway.entry_point
+        self.master.init(env, ','.join(files), cmd, num_containers, virtual_cores, memory)
+
+        return self.app_id
+
+    def add_containers(self, num_containers=1, virtual_cores=1, memory=128):
+        """
+        Method to add containers to an already running yarn app
+        
+        num_containers: int
+            Number of containers YARN should request (default: 1)
+            * A container should be requested with the number of cores it can
+              saturate, i.e.
+            * the average number of threads it expects to have runnable at a
+              time.
+        virtual_cores: int
+            Number of virtual cores per container (default: 1)
+            * A node's capacity should be configured with virtual cores equal to
+            * its number of physical cores.
+        memory: int
+            Memory per container (default: 128)
+            * The unit for memory is megabytes.
+        """
+        self.master.addContainers(num_containers, virtual_cores, memory)
 
     @staticmethod
     def create_env(env_name, packages=None, conda_root=None, remove=False):
@@ -247,11 +340,9 @@ class Knit(object):
         """
 
         c = CondaCreator(conda_root=conda_root)
-        path = c.create_env(env_name, packages=packages, remove=remove)
+        return c.create_env(env_name, packages=packages, remove=remove)
 
-        return path
-
-    def logs(self, app_id, shell=False):
+    def logs(self, shell=False):
         """
         Collect logs from RM (if running)
         With shell=True, collect logs from HDFS after job completion
@@ -268,9 +359,28 @@ class Knit(object):
         log: dictionary
             logs from each container (when possible)
         """
-        return self.yarn_api.logs(app_id, shell=shell)
+        return self.yarn_api.logs(self.app_id, shell=shell)
+    
 
-    def kill(self, app_id):
+    def wait_for_completion(self, timeout=10):
+        """
+        Wait for completion of the yarn application
+        
+        Returns
+        -------
+        bool:
+            True if successful, False otherwise
+        """
+        cur_status = self.runtime_status()
+        while cur_status != 'SUCCEEDED' and timeout > 0:
+            time.sleep(0.2)
+            timeout -= 0.2
+            cur_status = self.runtime_status()
+
+        return timeout > 0
+
+
+    def kill(self, timeout=10):
         """
         Method to kill a yarn application
 
@@ -278,29 +388,52 @@ class Knit(object):
         ----------
         app_id: str
             YARN application id
+        timeout: int
+            Time in seconds to wait for completion before killing (default 10s)
 
         Returns
         -------
         bool:
             True if successful, False otherwise.
         """
-        return self.yarn_api.kill(app_id)
+        try:
+            return self.client.kill()
+        except Py4JError:
+            logger.warn("Error while attempting to kill", exc_info=1)
 
-    def status(self, app_id):
+        # fallback
+        return self.yarn_api.kill(self.app_id)
+
+    def status(self):
         """ Get status of an application
-
-        Parameters
-        ----------
-        app_id: str
-             A yarn application ID string
 
         Returns
         -------
         log: dictionary
             status of application
         """
-        return self.yarn_api.status(app_id)
+        return self.yarn_api.status(self.app_id)
+    
+    def runtime_status(self):
+        """ Get runtime status of an application
 
-    @property
-    def apps(self):
-        return self.yarn_api.apps
+        Returns
+        -------
+        str:
+            status of application
+        """
+        try:
+            status = self.client.status()
+            # rename finished to succeeded
+            if status == "FINISHED":
+                return "SUCCEEDED"
+            return status
+        except Py4JError:
+            logger.warn("Error while fetching status", exc_info=1)
+
+        # fallback
+        status = self.status(self.app_id)
+        final_status = status['app']['finalStatus']
+        if final_status == 'UNDEFINED':
+            return status['app']['state']
+        return final_status
