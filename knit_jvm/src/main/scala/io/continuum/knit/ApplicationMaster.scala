@@ -1,116 +1,169 @@
 package io.continuum.knit
 
-import java.io.File
-import java.util.Collections
+import java.io._
 import java.net._
+import java.nio.ByteBuffer
+import java.util.Collections
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records._
+import org.apache.hadoop.yarn.api.protocolrecords._ 
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest
-import org.apache.hadoop.yarn.client.api.{AMRMClient, NMClient}
+import org.apache.hadoop.yarn.client.api.async.{AMRMClientAsync, NMClientAsync}
 import org.apache.hadoop.yarn.conf.YarnConfiguration
 import org.apache.hadoop.yarn.util.Records
 import org.apache.hadoop.security.{Credentials, UserGroupInformation}
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException
+import org.apache.log4j.Logger
 
 import io.continuum.knit.Utils._
-import io.continuum.knit.ApplicationMasterArguments.{parseArgs}
 
+import py4j.GatewayServer
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
 
-object ApplicationMaster {
+object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler with NMClientAsync.CallbackHandler {
+  
+  var gatewayServer: GatewayServer = _
+  
+  implicit var conf: YarnConfiguration = _
+  var fs: FileSystem = _
+  var rmClient: AMRMClientAsync[ContainerRequest] = _
+  var nmClient: NMClientAsync = _
 
+  var registerResponse : RegisterApplicationMasterResponse = _
+  var outstandingRequests = List[ContainerRequest]()
+  
+  var files: String = _
+  var pythonEnv: String = _
+  var shellCMD: String = _
+  
+  var numRequested = 0
+  var numCompleted = 0
+  var numFailed = 0
+  var done = false
 
   def main(args: Array[String]) {
-
-    implicit val conf = new YarnConfiguration()
-    val fs = FileSystem.get(conf)
-
-    val parsedArgs = parseArgs(args)
-    println(parsedArgs)
-
-    val pythonEnv = parsedArgs.pythonEnv
-    val numContainers = parsedArgs.numContainers
-    val shellCMD = parsedArgs.command
-    val vCores = parsedArgs.virtualCores
-    val mem = parsedArgs.memory
-    val files = parsedArgs.files
-
-
-    val stagingDir = ".knitDeps"
-    val user = sys.env.get("KNIT_USER")
-    val stagingDirPath = new Path(System.getenv("KNIT_YARN_STAGING_DIR"))
-
-    println(s"User: $user StagingDir: $stagingDirPath")
-    println("Running command in container: " + shellCMD)
-    val cmd = List(
-      shellCMD +
-        " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
-        " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
-    )
-    println(cmd)
+    logger.info("Construct application master")
+    
+    val localInetAddress = findLocalInetAddress()
+    gatewayServer = new GatewayServer(this, 0, 
+        GatewayServer.DEFAULT_PYTHON_PORT,
+        localInetAddress,
+        localInetAddress,
+        GatewayServer.DEFAULT_CONNECT_TIMEOUT,
+        GatewayServer.DEFAULT_READ_TIMEOUT,
+        null)
+    
+    gatewayServer.start()
+    
+    val boundPort: Int = gatewayServer.getListeningPort
+    if (boundPort == -1) {
+      logger.error("GatewayServer failed to bind; exiting")
+      System.exit(1)
+    } else {
+      logger.debug(s"Started PythonGatewayServer on port $boundPort")
+    }
+    
+    conf = new YarnConfiguration()
+    fs = FileSystem.get(conf)
 
     // Create a client to talk to the RM
-    val rmClient = AMRMClient.createAMRMClient().asInstanceOf[AMRMClient[ContainerRequest]]
+    rmClient = AMRMClientAsync.createAMRMClientAsync[ContainerRequest](1000, this)
     rmClient.init(conf)
     rmClient.start()
-    val amRMResponse = rmClient.registerApplicationMaster("", 0, "")
-
-    val maxMem = amRMResponse.getMaximumResourceCapability.getMemory
-    val maxCores = amRMResponse.getMaximumResourceCapability.getVirtualCores
-
-    println(s"Max memory: $maxMem, Max vCores: $maxCores")
-
+    registerResponse = rmClient.registerApplicationMaster(localInetAddress.getHostAddress, boundPort, "")
+    
     //create a client to talk to NM
-    val nmClient = NMClient.createNMClient()
+    nmClient = NMClientAsync.createNMClientAsync(this)
     nmClient.init(conf)
     nmClient.start()
-
-    val priority = Records.newRecord(classOf[Priority])
-    priority.setPriority(0)
+  }
+  
+  def init(pythonEnv: String, files: String, shellCMD: String, numContainers: Int, vCores: Int, mem: Int) {
+    logger.info("Init application master")
+    
+    this.pythonEnv = pythonEnv
+    this.files = files
+    this.shellCMD = shellCMD
+    
+    val previousAttempts = registerResponse.getContainersFromPreviousAttempts
+    val nrRunningContainers = previousAttempts.size
+    val nrContainersToRequest = numContainers - nrRunningContainers
+    
+    logger.info(s"$nrRunningContainers containers still running, requesting $nrContainersToRequest")
+    addContainers(nrContainersToRequest, vCores, mem)
+  }
+    
+  def addContainers(numContainers: Int, vCores: Int, mem: Int) {
+    logger.info(s"Add $numContainers containers")
 
     //resources needed by each container
     val resource = Records.newRecord(classOf[Resource])
-    println(s"Request: $mem MB of RAM and $vCores number of coress ")
+    logger.info(s"Request: $mem MB of RAM and $vCores cores")
     resource.setMemory(mem)
     resource.setVirtualCores(vCores)
+    
+    val priority = Records.newRecord(classOf[Priority])
+    priority.setPriority(0)
 
     //request for containers
     for ( i <- 1 to numContainers) {
       val containerAsk = new ContainerRequest(resource,null,null,priority)
-      println(s"Requesting Container: $i with Resources: $resource")
-      println(s"Requested container ask: $containerAsk")
+      logger.info(s"Requested container resources: $resource")
+      logger.info(s"Requested container ask: $containerAsk")
+      
       rmClient.addContainerRequest(containerAsk)
+      outstandingRequests ::= containerAsk
+      numRequested += 1
     }
+  }
+    
+  override def onContainersAllocated(containers: java.util.List[Container]) = {
+    val stagingDir = ".knitDeps"
+    val user = sys.env.get("KNIT_USER")
+    val stagingDirPath = new Path(System.getenv("KNIT_YARN_STAGING_DIR"))
 
-    var responseId = 0
-    var completedContainers = 0
-    try {
-      while (completedContainers < numContainers) {
+    logger.debug(s"User: $user StagingDir: $stagingDirPath")
+    logger.info(s"Running command in container: $shellCMD")
+
+    //containers allocated, first remove all requests    
+    for (container <- containers.asScala) {
+      if (outstandingRequests.isEmpty) {
+        //not expecting this container, releasing
+        //see https://issues.apache.org/jira/browse/YARN-1902 
+        //and https://issues.apache.org/jira/browse/YARN-3020
+        rmClient.releaseAssignedContainer(container.getId)
+        
+      } else {
+        rmClient.removeContainerRequest(outstandingRequests.last)
+        outstandingRequests = outstandingRequests.init
 
         val localResources = HashMap[String, LocalResource]()
         val env = collection.mutable.Map[String, String]()
-
+  
         //setup local resources
-        if (files.nonEmpty) {
-          for (file <- files) {
+        if (files.length > 0) {
+          val fileArray = files.split(",")
+          for (fileName <- fileArray) {
+            val file = new File(fileName)
             val name = file.getName
-            println(s"Pulling File: $name")
+    
+            logger.debug(s"Pulling File: $name")
             val localfile = Records.newRecord(classOf[LocalResource])
             val HDFS_FILE_PATH = new Path(stagingDirPath, name).makeQualified(fs.getUri, fs.getWorkingDirectory)
             setUpLocalResource(HDFS_FILE_PATH, localfile)
             localResources(name) = localfile
           }
         }
-
+  
         //setup python resources
         if (pythonEnv.nonEmpty) {
           val appMasterPython = Records.newRecord(classOf[LocalResource])
-          val envFile = new java.io.File(pythonEnv)
+          val envFile = new File(pythonEnv)
           val envZip = envFile.getName
           val envName = envZip.split('.').init(0)
           val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
@@ -120,53 +173,145 @@ object ApplicationMaster {
           env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
           localResources("PYTHON_DIR") = appMasterPython
         }
-
+  
         setUpEnv(env)
-
-        val response = rmClient.allocate(0.1f)
-        responseId += 1
-        for (container <- response.getAllocatedContainers.asScala) {
-          val ctx =
-            Records.newRecord(classOf[ContainerLaunchContext])
-          ctx.setCommands(
-            List(
-              shellCMD +
-                " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
-                " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
-            ).asJava
-          )
-
-          ctx.setLocalResources(localResources.asJava)
-          ctx.setEnvironment(env.asJava)
-
-          System.out.println("Launching container " + container)
-          try {
-            nmClient.startContainer(container, ctx)
-          } catch {
-            case e: Exception => println(s"Exception $e")
-          }
+        
+        val ctx = Records.newRecord(classOf[ContainerLaunchContext])
+        ctx.setCommands(
+          List(
+            shellCMD +
+              " 1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stdout" +
+              " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
+          ).asJava
+        )
+    
+        ctx.setLocalResources(localResources.asJava)
+        ctx.setEnvironment(env.asJava)
+    
+        logger.info(s"Launching container $container")
+        try {
+          nmClient.startContainerAsync(container, ctx)
+        } catch {
+          case e: Exception => 
+            logger.error("Exception", e)
         }
-
-        for (status <- response.getCompletedContainersStatuses.asScala) {
-          println("completed" + status.getContainerId)
-          completedContainers += 1
-
-        }
-
-        Thread.sleep(1000)
       }
-    } catch {
-      case e: org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException =>
-        println(s"Yarn Application is possibly being killed: $e")
+    }
+  }
+  
+  override def onContainersCompleted(statuses: java.util.List[ContainerStatus]) = {
+    for (status <- statuses.asScala) {
+        numCompleted += 1
+        
+        logger.info(s"Container completed $status.getContainerId")
+        if (status.getExitStatus != 0) {
+          numFailed += 1
+        }
     }
 
-
-    rmClient.unregisterApplicationMaster(
-      FinalApplicationStatus.SUCCEEDED, "", "")
-    rmClient.stop()
-
+    if (numCompleted >= numRequested) {
+      nmClient.stop()
+      
+      try {
+        if (numFailed > 0) {
+          rmClient.unregisterApplicationMaster(FinalApplicationStatus.FAILED, "", "")
+        } else {
+          rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, "", "")
+        }
+      } catch {
+        case e: Exception => 
+          logger.error("Exception", e)
+      }
+      
+      rmClient.stop()
+      
+      gatewayServer.shutdown()
+      
+      done = true
+    }
+  }
+  
+  override def onNodesUpdated(updatedNodes: java.util.List[NodeReport]) = {
+    
+  }
+  
+  override def onShutdownRequest = {
+    logger.info("Got shutdown request")
+  }
+  
+  override def onError(e: Throwable) = {
+    logger.error("Received error", e)
+  }
+  
+  override def getProgress: Float = {
+    if (numRequested > 0) {
+      0.1F + (numCompleted/(numRequested * 0.9F))
+    } else {
+      0.1F
+    }
+  }
+  
+  override def onContainerStarted(containerId: ContainerId, allServiceResponse: java.util.Map[String, ByteBuffer]) = {
+    logger.info(s"Container started $containerId")
+  }
+  override def onContainerStatusReceived(containerId: ContainerId, containerStatus: ContainerStatus) = {
+    logger.debug(s"Container status $containerId: $containerStatus")
+  }
+  override def onContainerStopped(containerId: ContainerId) = {
+    logger.info(s"Container stopped $containerId")
+  }
+  override def onStartContainerError(containerId: ContainerId, t: Throwable) = {
+    logger.error(s"Container start error $containerId", t)
+  }
+  override def onGetContainerStatusError(containerId: ContainerId, t: Throwable) = {
+    logger.error(s"Container status error $containerId", t)
+  }
+  override def onStopContainerError(containerId: ContainerId, t: Throwable) = {
+    logger.error(s"Container stop error $containerId", t)
+  }
+  
+  def getNumRequested() = {
+    numRequested
+  }
+  def getNumCompleted() = {
+    numCompleted
+  }
+  def getNumFailed() = {
+    numFailed
   }
 
 
+  //from https://raw.githubusercontent.com/apache/spark/e97fc7f176f8bf501c9b3afd8410014e3b0e1602/core/src/main/scala/org/apache/spark/util/Utils.scala
+  //thank you spark
+  private def findLocalInetAddress(): InetAddress = {
+    val address = InetAddress.getLocalHost
+    if (address.isLoopbackAddress) {
+      // Address resolves to something like 127.0.1.1, which happens on Debian; try to find
+      // a better address using the local network interfaces
+      // getNetworkInterfaces returns ifs in reverse order compared to ifconfig output order
+      // on unix-like system. On windows, it returns in index order.
+      // It's more proper to pick ip address following system output order.
+      val activeNetworkIFs = NetworkInterface.getNetworkInterfaces.asScala.toSeq
+      val reOrderedNetworkIFs = activeNetworkIFs.reverse
 
+      for (ni <- reOrderedNetworkIFs) {
+        val addresses = ni.getInetAddresses.asScala
+          .filterNot(addr => addr.isLinkLocalAddress || addr.isLoopbackAddress).toSeq
+        if (addresses.nonEmpty) {
+          val addr = addresses.find(_.isInstanceOf[Inet4Address]).getOrElse(addresses.head)
+          // because of Inet6Address.toHostName may add interface at the end if it knows about it
+          val strippedAddress = InetAddress.getByAddress(addr.getAddress)
+          // We've found an address that looks reasonable!
+          logger.warn("Your hostname, " + InetAddress.getLocalHost.getHostName + " resolves to" +
+            " a loopback address: " + address.getHostAddress + "; using " +
+            strippedAddress.getHostAddress + " instead (on interface " + ni.getName + ")")
+          return strippedAddress
+        }
+      }
+      logger.warn("Your hostname, " + InetAddress.getLocalHost.getHostName + " resolves to" +
+        " a loopback address: " + address.getHostAddress + ", but we couldn't find any" +
+        " external IP address!")
+    }
+    address
+  }
 }
