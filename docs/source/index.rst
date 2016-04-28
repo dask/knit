@@ -84,7 +84,7 @@ See :doc:`the quickstart <quickstart>` to get started.
 .. _kitten: https://github.com/cloudera/kitten
 .. _`Apache Slider`: https://slider.incubator.apache.org/
 .. _`IPython Parallel`: https://ipython.org/ipython-doc/3/parallel/
-.. _`Dask+Distributed`: http://distributed.readthedocs.org/en/latest/
+.. _`Dask+Distributed`: http://distributed.readthedocs.io/en/latest/
 .. _`conda`: http://conda.pydata.org/docs/
 
 .. toctree::

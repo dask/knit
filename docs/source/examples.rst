@@ -65,4 +65,4 @@ IPython Parallel is now running in 3 containers on our YARN managed cluster:
 
 
 .. _`IPython Parallel`: https://ipython.org/ipython-doc/3/parallel/
-.. _`Dask + Distributed`: http://distributed.readthedocs.org/en/latest/
+.. _`Dask + Distributed`: http://distributed.readthedocs.io/en/latest/
