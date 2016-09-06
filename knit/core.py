@@ -53,6 +53,8 @@ class Knit(object):
         Resource Manager port (default: 8088)
     autodetect: bool
         Autodetect NN/RM IP/Ports
+    validate: bool
+        Validate entered NN/RM IP/Ports match detected config file
 
     Examples
     --------
@@ -61,7 +63,7 @@ class Knit(object):
     >>> app_id = k.start('sleep 100', num_containers=5, memory=1024)
     """
     def __init__(self, nn="localhost", nn_port=9000,
-                 rm="localhost", rm_port=8088, autodetect=False):
+                 rm="localhost", rm_port=8088, autodetect=False, validate=True):
 
         self.nn = nn
         self.nn_port = str(nn_port)
@@ -72,7 +74,8 @@ class Knit(object):
         if autodetect:
             self.nn,  self.nn_port = self._hdfs_conf(autodetect)
             self.rm,  self.rm_port = self._yarn_conf(autodetect)
-        else:
+        
+        if validate and not autodetect:
             # validates IP/Port is correct
             self._hdfs_conf()
             self._yarn_conf()
