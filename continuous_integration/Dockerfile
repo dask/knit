@@ -2,7 +2,7 @@ FROM ubuntu:trusty
 
 # anaconda
 RUN apt-get update && apt-get install -y -q curl bzip2 zip git
-RUN curl http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
+RUN curl -L https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
 RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
 ENV PATH /opt/anaconda/bin:$PATH
