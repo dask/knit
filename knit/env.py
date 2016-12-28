@@ -12,9 +12,9 @@ from .exceptions import CondaException
 from .utils import shell_out
 
 mini_file = "Miniconda-latest.sh"
-miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh",
-                 "darwin": "https://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-x86_64.sh",
-                 "win": "https://repo.continuum.io/miniconda/Miniconda-latest-Windows-x86_64.exe"
+miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh",
+                 "darwin": "https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh",
+                 "win": "https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe"
 }
 
 logger = logging.getLogger(__name__)
