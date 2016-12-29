@@ -40,11 +40,11 @@ def wait_for_containers(k, running_containers, timeout=30):
 
 @pytest.yield_fixture
 def k():
-    knitter = Knit()
+    knitter = Knit(nn_port=8020, rm_port=8088)
     yield knitter
 
 
-def test_port(k):
+def test_port():
     with pytest.raises(HDFSConfigException):
         Knit(nn_port=90000, rm_port=90000)
     with pytest.raises(HDFSConfigException):
@@ -54,7 +54,7 @@ def test_port(k):
 
     if inside_docker:
         # should pass without incident
-        Knit(nn_port=9000, rm_port=8088)
+        Knit(nn_port=8020, rm_port=8088)
 
 
 def test_hostname(k):
@@ -67,7 +67,7 @@ def test_hostname(k):
         # should pass without incident
         Knit(nn="localhost")
         k = Knit(autodetect=True)
-        str(k) == 'Knit<NN=localhost:9000;RM=localhost:8088>'
+        str(k) == 'Knit<NN=localhost:8020;RM=localhost:8088>'
 
 
 def test_argument_parsing(k):

@@ -62,7 +62,7 @@ class Knit(object):
     >>> k = Knit()
     >>> app_id = k.start('sleep 100', num_containers=5, memory=1024)
     """
-    def __init__(self, nn="localhost", nn_port=9000,
+    def __init__(self, nn="localhost", nn_port=8020,
                  rm="localhost", rm_port=8088, autodetect=False, validate=True):
 
         self.nn = nn

@@ -1,19 +1,27 @@
-#!/bin/bash
+#!bin/bash
 
-echo "Starting HDFS"
+set -e
 
-# Start HDFS
-sudo service hadoop-hdfs-namenode start
-sudo service hadoop-hdfs-datanode start
+export HADOOP_PREFIX=/usr/local/hadoop
+$HADOOP_PREFIX/etc/hadoop/hadoop-env.sh
 
-echo "Starting YARN"
+service sshd start
 
-# Start YARN
-sudo service hadoop-yarn-resourcemanager start
-sudo service hadoop-yarn-proxyserver start
-sudo service hadoop-yarn-nodemanager start
+rm -f /tmp/*.pid
+$HADOOP_PREFIX/sbin/start-dfs.sh
 
-echo "Ready"
+echo "--"
+echo "-- HDFS started!"
+echo "--"
 
-# Block
+$HADOOP_PREFIX/sbin/start-yarn.sh
+
+echo "--"
+echo "-- YARN started!"
+echo "--"
+
+# Wait for nodes to be fully initialized
+sleep 5
+
+# Stay alive
 sleep infinity
