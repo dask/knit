@@ -1,5 +1,8 @@
 FROM sequenceiq/hadoop-docker:2.7.1
 
+ENV LANG en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
+
 RUN curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o /tmp/miniconda.sh
 RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
