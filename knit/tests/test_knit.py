@@ -112,17 +112,28 @@ def test_multiple_containers(k):
     assert got_containers
 
 
-def test_add_containers(k):
-    cmd = "sleep 30"
+def test_add_remove_containers(k):
+    cmd = "sleep 60"
     k.start(cmd, num_containers=1)
 
     wait_for_status(k, 'RUNNING')
 
     got_containers = wait_for_containers(k, 2)
 
+    containers = k.get_containers()
+    assert len(containers) == 2
+
     k.add_containers(num_containers=1)
 
     got_more_containers = wait_for_containers(k, 3)
+
+    containers = k.get_containers()
+    assert len(containers) == 3
+    k.remove_containers(containers[1])
+
+    got_more_containers = wait_for_containers(k, 2)
+    containers = k.get_containers()
+    assert len(containers) == 2
 
     # wait for job to finish
     if not k.wait_for_completion(30):

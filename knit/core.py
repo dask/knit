@@ -299,7 +299,7 @@ class Knit(object):
     def add_containers(self, num_containers=1, virtual_cores=1, memory=128):
         """
         Method to add containers to an already running yarn app
-        
+
         num_containers: int
             Number of containers YARN should request (default: 1)
             * A container should be requested with the number of cores it can
@@ -315,6 +315,41 @@ class Knit(object):
             * The unit for memory is megabytes.
         """
         self.master.addContainers(num_containers, virtual_cores, memory)
+
+    def get_containers(self):
+        """
+        Method to return active containers
+
+            Calls getContainers in Client.scala which returns comma delimited
+            containerIds
+
+        Returns
+        -------
+        container_list: List
+            List of str
+
+        """
+        return self.client.getContainers().split(',')
+
+    def remove_containers(self, container_id):
+        """
+        Method to remove containers from a running yarn app
+
+            Calls removeContainers in ApplicationMaster.scala
+
+        Be careful removing the ...0001 container.  This is where the
+        applicationMaster is running
+
+        Parameters
+        ----------
+        container_id: str
+
+        Returns
+        -------
+        None
+
+        """
+        self.master.removeContainer(str(container_id))
 
     @staticmethod
     def create_env(env_name, packages=None, conda_root=None, remove=False):
@@ -402,7 +437,7 @@ class Knit(object):
         try:
             return self.client.kill()
         except Py4JError:
-            logger.warn("Error while attempting to kill", exc_info=1)
+            logger.debug("Error while attempting to kill", exc_info=1)
 
         # fallback
         return self.yarn_api.kill(self.app_id)
@@ -432,7 +467,7 @@ class Knit(object):
                 return "SUCCEEDED"
             return status
         except Py4JError:
-            logger.warn("Error while fetching status", exc_info=1)
+            logger.debug("Error while fetching status", exc_info=1)
 
         # fallback
         status = self.status(self.app_id)

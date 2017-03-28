@@ -176,28 +176,50 @@ object Client extends Logging{
   
   def masterRPCHost(): String = {
     val appReport = client.getApplicationReport(appId)
-    return appReport.getHost
+    appReport.getHost
   }
-  
+
+  def getContainers(): String = {
+    val attempts = client.getApplicationAttempts(appId).asScala
+    val attempt = attempts.last
+
+    logger.info(s"Getting containers for $attempt")
+    val containers = client.getContainers(attempt.getApplicationAttemptId).asScala
+    var list_ = List[String]()
+
+    for (container <- containers) {
+      list_ ::= container.getContainerId.toString
+    }
+
+    val container_list = list_.mkString(",")
+    logger.info(s"Container ID: $container_list")
+    container_list
+  }
+
   def masterRPCPort(): Int = {
     val appReport = client.getApplicationReport(appId)
-    return appReport.getRpcPort
+    appReport.getRpcPort
   }
 
   def numUsedContainers() : Int = {
     val appReport = client.getApplicationReport(appId)
     val usageReport = appReport.getApplicationResourceUsageReport
-    return usageReport.getNumUsedContainers
+    usageReport.getNumUsedContainers
   }
-  
+
   def status() : String = {
     val appReport = client.getApplicationReport(appId)
-    return appReport.getYarnApplicationState.name
+    appReport.getYarnApplicationState.name
   }
-  
+
+  def applicationAttempts() : String = {
+    val attempts = client.getApplicationAttempts(appId)
+    attempts.toString
+  }
+
   def kill() : Boolean = {
     client.killApplication(appId)
-    return true
+    true
   }
   
 }
