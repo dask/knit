@@ -7,12 +7,12 @@ RUN curl -L https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.s
 RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
 ENV PATH /usr/local/hadoop-2.7.1/bin:/opt/anaconda/bin:$PATH
-RUN conda install -y -q pip coverage pytest requests apache-maven lxml -c anaconda-cluster
-RUN conda create -y -q -n py26 coverage python=2.6 pytest requests apache-maven lxml -c anaconda-cluster
-RUN conda create -y -q -n py3 coverage python=3 pytest requests apache-maven lxml -c anaconda-cluster
+RUN conda install -y -q pip coverage pytest requests maven lxml -c conda-forge
+RUN conda create -y -q -n py36 coverage python=3.6 pytest requests maven lxml -c conda-forge
+RUN conda create -y -q -n py35 coverage python=3.5 pytest requests maven lxml -c conda-forge
 RUN /opt/anaconda/bin/pip install coveralls
-RUN /opt/anaconda/envs/py26/bin/pip install coveralls
-RUN /opt/anaconda/envs/py3/bin/pip install coveralls
+RUN /opt/anaconda/envs/py36/bin/pip install coveralls
+RUN /opt/anaconda/envs/py35/bin/pip install coveralls
 
 ENV HADOOP_PREFIX=/usr/local/hadoop
 ENV HADOOP_CONF_DIR=$HADOOP_PREFIX/etc/hadoop
