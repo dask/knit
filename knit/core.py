@@ -45,12 +45,14 @@ class Knit(object):
         Namenode hostname/ip
     nn: str
         Namenode hostname/ip
-    nn_port: str
+    nn_port: int
         Namenode Port (default: 9000)
     rm: str
         Resource Manager hostname
-    rm_port: str
+    rm_port: int
         Resource Manager port (default: 8088)
+    replication_factor: int
+        replication factor for files upload to HDFS (default: 3)
     autodetect: bool
         Autodetect NN/RM IP/Ports
     validate: bool
@@ -63,13 +65,15 @@ class Knit(object):
     >>> app_id = k.start('sleep 100', num_containers=5, memory=1024)
     """
     def __init__(self, nn="localhost", nn_port=8020,
-                 rm="localhost", rm_port=8088, autodetect=False, validate=True):
+                 rm="localhost", rm_port=8088, replication_factor=3,
+                 autodetect=False, validate=True):
 
         self.nn = nn
         self.nn_port = str(nn_port)
 
         self.rm = rm
         self.rm_port = str(rm_port)
+        self.replication_factor = replication_factor
 
         if autodetect:
             self.nn,  self.nn_port = self._hdfs_conf(autodetect)
@@ -85,9 +89,12 @@ class Knit(object):
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
 
+
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
-        
+        os.environ['REPLICATION_FACTOR'] = str(self.replication_factor)
+        os.environ['REPLICATION_FACTOR'] = str(self.replication_factor)
+
         self.client = None
         self.master = None
         self.app_id = None
