@@ -7,6 +7,7 @@ import subprocess
 from functools import wraps
 
 from knit.dask_yarn import DaskYARNCluster
+from knit import core
 from distributed import Client
 from distributed.utils_test import loop
 
@@ -34,6 +35,22 @@ def test_knit_config():
     cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
                           validate=False, autodetect=False)
     str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
+
+    try:
+        core.defaults['nn'] = 'nothost'
+        d = DaskYARNCluster(autodetect=True)
+        assert d.knit.nn == 'localhost'
+
+        d = DaskYARNCluster(autodetect=False)
+        assert d.knit.nn == 'nothost'
+
+        d = DaskYARNCluster(autodetect=True, nn='oi')
+        assert d.knit.nn == 'oi'
+
+        d = DaskYARNCluster(autodetect=True, nn='oi')
+        assert d.knit.nn == 'oi'
+    finally:
+        core.defaults['nn'] = 'localhost'
 
 
 def test_yarn_cluster(loop):

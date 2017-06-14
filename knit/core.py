@@ -159,7 +159,7 @@ class Knit(object):
         try:
             if autodetect:
                 with open(core_site, 'r') as f:
-                    conf = parse_xml(f, 'fs.DefaultFS')
+                    conf = parse_xml(f, 'fs.defaultFS')
                 host, port = conf['host'], conf['port']
             else:
                 host, port = defaults['nn'], defaults['nn_port']
