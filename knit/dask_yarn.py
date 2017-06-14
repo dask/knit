@@ -20,10 +20,22 @@ def first_word(s):
 
 
 class DaskYARNCluster(object):
-    nn = "localhost"
-    nn_port = 8020
-    rm = "localhost"
-    rm_port = 8088
+    """
+    Implements a dask cluster with YARN containers running the worker processes.
+    
+    Parameters
+    ----------
+    nn, nn_port, rm, rm_port, autodetect, validate: see knit.Knit
+    env: str or None
+        If provided, the path of a zipped conda env to put in containers
+    packages: list of str
+        Packages to install in the env to provide to containers *if* env is 
+        None. Uses conda spec for pinning versions. dask and distributed will
+        always be included.
+    ip: IP-like string or None
+        Address for the scheduler to listen on. If not given, uses the system
+        IP.
+    """
 
     def __init__(self, nn=None, nn_port=None, rm=None,
                  rm_port=None, autodetect=True, validate=False,
@@ -31,7 +43,7 @@ class DaskYARNCluster(object):
 
         ip = ip or socket.gethostbyname(socket.gethostname())
 
-        self.env = env or None
+        self.env = env
 
         try:
             self.local_cluster = LocalCluster(n_workers=0, ip=ip)
@@ -39,23 +51,11 @@ class DaskYARNCluster(object):
             self.local_cluster = LocalCluster(n_workers=0, scheduler_port=0,
                                               ip=ip)
 
-        if not self.env:
-            if not packages:
-                packages = []
+        self.packages = list(
+            sorted(unique((packages or []) + global_packages, key=first_word)))
 
-            self.packages = list(
-                unique(packages + global_packages, key=first_word))
-
-        # if any hdfs/yarn settings are used don't use autodetect
-        if autodetect or any([nn, nn_port, rm, rm_port]):
-            self.knit = Knit(autodetect=True, validate=validate)
-        else:
-            nn = nn or self.nn
-            nn_port = nn_port or self.nn_port
-            rm = rm or self.rm
-            rm_port = rm_port or self.rm_port
-            self.knit = Knit(nn=nn, nn_port=nn_port, rm=rm, rm_port=rm_port,
-                             validate=validate)
+        self.knit = Knit(nn=nn, nn_port=nn_port, rm=rm, rm_port=rm_port,
+                         validate=validate, autodetect=autodetect)
 
         atexit.register(self.stop)
 
@@ -64,7 +64,7 @@ class DaskYARNCluster(object):
         return self.local_cluster.scheduler_address
 
     def start(self, n_workers, cpus=1, memory=4000):
-        if not self.env:
+        if self.env is None:
             env_name = 'dask-' + sha1(
                 '-'.join(self.packages).encode()).hexdigest()
             if os.path.exists(

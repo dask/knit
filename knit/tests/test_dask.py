@@ -8,6 +8,7 @@ from functools import wraps
 
 from knit.dask_yarn import DaskYARNCluster
 from distributed import Client
+from distributed.utils_test import loop
 
 
 def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):

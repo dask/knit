@@ -1,10 +1,13 @@
 from __future__ import absolute_import, division, print_function
+import warnings
 
 from .utils import *
 from .core import *
-from .dask_yarn import DaskYARNCluster
-
-__version__ = '0.0.1'
+try:
+    from .dask_yarn import DaskYARNCluster
+except ImportError:
+    warnings.warn('dask/distributed not installed, '
+                  'DaskYARNCluster not available')
 
 from ._version import get_versions
 __version__ = get_versions()['version']

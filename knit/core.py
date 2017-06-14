@@ -34,15 +34,22 @@ def read_int(stream):
         raise EOFError
     return struct.unpack("!i", length)[0]
 
+defaults = dict(nn='localhost', nn_port='8020', rm='localhost', rm_port='8088')
+confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get(
+    'HADOOP_INSTALL', '') + '/hadoop/conf')
+
 
 class Knit(object):
     """
-    Connection to HDFS/YARN
+    Connection to HDFS/YARN.
+    
+    Parameter definition (nn, nn_port, rm, rm_port): those parameters given
+    to __init__ take priority. If autodetect=True, Knit will attempt to fill
+    out the others from system configuration files; fallback values are provided
+    if this fails.
 
     Parameters
     ----------
-    nn: str
-        Namenode hostname/ip
     nn: str
         Namenode hostname/ip
     nn_port: int
@@ -64,31 +71,24 @@ class Knit(object):
     >>> k = Knit()
     >>> app_id = k.start('sleep 100', num_containers=5, memory=1024)
     """
-    def __init__(self, nn="localhost", nn_port=8020,
-                 rm="localhost", rm_port=8088, replication_factor=3,
-                 autodetect=False, validate=True):
+
+    def __init__(self, nn=None, nn_port=None,  rm=None, rm_port=None,
+                 replication_factor=3, autodetect=False, validate=True):
 
         self.nn = nn
-        self.nn_port = str(nn_port)
+        self.nn_port = str(nn_port) if nn_port is not None else None
 
         self.rm = rm
-        self.rm_port = str(rm_port)
+        self.rm_port = str(rm_port) if nn_port is not None else None
         self.replication_factor = replication_factor
 
-        if autodetect:
-            self.nn,  self.nn_port = self._hdfs_conf(autodetect)
-            self.rm,  self.rm_port = self._yarn_conf(autodetect)
-        
-        if validate and not autodetect:
-            # validates IP/Port is correct
-            self._hdfs_conf()
-            self._yarn_conf()
+        self._hdfs_conf(autodetect, validate)
+        self._yarn_conf(autodetect, validate)
 
         self.yarn_api = YARNAPI(self.rm, self.rm_port)
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
-
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
@@ -109,84 +109,75 @@ class Knit(object):
     def JAR_FILE_PATH(self):
         return os.path.join(self.KNIT_HOME, JAR_FILE)
 
-    def _yarn_conf(self, autodetect=False):
+    def _yarn_conf(self, autodetect=False, validate=False):
         """
         Load YARN config from default locations.
+        
         Parameters
         ----------
         autodetect: bool
-
-        Returns
-        -------
-            tuple (ip, port)
-
+            Find and use system config file
+        validate: bool
+            Assure that any provided parameters match system config file
         """
-        confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
-                               '') + '/hadoop/conf')
-        conf = {}
         yarn_site = os.path.join(confd, 'yarn-site.xml')
         try:
-            with open(yarn_site, 'r') as f:
-                conf = parse_xml(f, 'yarn.resourcemanager.webapp.address')
-        except FileNotFoundError:
-            pass
-        finally:
-            if not conf:
-                conf['host'] = "localhost"
-                conf['port'] = "8088"
+            if autodetect:
+                with open(yarn_site, 'r') as f:
+                    conf = parse_xml(f, 'yarn.resourcemanager.webapp.address')
+                host, port = conf['host'], conf['port']
+            else:
+                host, port = defaults['rm'], defaults['rm_port']
+        except (FileNotFoundError, KeyError):
+            host, port = defaults['rm'], defaults['rm_port']
 
-        if autodetect:
-            return conf['host'], conf['port']
-
-        if self.rm != conf['host']:
-            msg = "Possible Resource Manager hostname mismatch.  Detected {0}".format(conf['host'])
+        if self.rm and self.rm != host and validate:
+            msg = ("Possible Resource Manager hostname mismatch.  "
+                   "Detected {0}").format(host)
             raise HDFSConfigException(msg)
 
-        if str(self.rm_port) != str(conf['port']):
-            msg = "Possible Resource Manager port mismatch.  Detected {0}".format(conf['port'])
+        if self.rm_port and str(self.rm_port) != port and validate:
+            msg = ("Possible Resource Manager port mismatch.  "
+                   "Detected {0}").format(port)
             raise HDFSConfigException(msg)
 
-        return conf
+        self.rm = self.rm or host
+        self.rm_port = self.rm_port or port
 
-    def _hdfs_conf(self, autodetect=False):
-        """"
+    def _hdfs_conf(self, autodetect=False, validate=False):
+        """
+        Load HDFS config from default locations.
+        
         Parameters
         ----------
         autodetect: bool
-
-        Returns
-        -------
-            tuple (ip, port)
-
+            Find and use system config file
+        validate: bool
+            Assure that any provided parameters match system config file
         """
-        confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get('HADOOP_INSTALL',
-                               '') + '/hadoop/conf')
-        conf = {}
         core_site = os.path.join(confd, 'core-site.xml')
-
         try:
-            with open(core_site, 'r') as f:
-                conf = parse_xml(core_site, 'fs.defaultFS')
-        except FileNotFoundError:
-            pass
+            if autodetect:
+                with open(core_site, 'r') as f:
+                    conf = parse_xml(f, 'fs.DefaultFS')
+                host, port = conf['host'], conf['port']
+            else:
+                host, port = defaults['nn'], defaults['nn_port']
+        except (FileNotFoundError, KeyError):
+            host, port = defaults['nn'], defaults['nn_port']
 
-        finally:
-            if not conf:
-                conf['host'] = "localhost"
-                conf['port'] = "9000"
-
-        if autodetect:
-            return conf['host'], conf['port']
-
-        if self.nn != conf['host']:
-            msg = "Possible Namenode hostname mismatch.  Detected {0}".format(conf['host'])
+        if self.nn and self.nn != host and validate:
+            msg = ("Possible Resource Manager hostname mismatch.  "
+                   "Detected {0}").format(host)
             raise HDFSConfigException(msg)
 
-        if str(self.nn_port) != str(conf['port']):
-            msg = "Possible Namenode port mismatch.  Detected {0}".format(conf['port'])
+        if self.nn_port and str(self.nn_port) != port and validate:
+            msg = ("Possible Resource Manager port mismatch.  "
+                   "Detected {0}").format(port)
             raise HDFSConfigException(msg)
 
-        return conf
+        self.nn = self.nn or host
+        self.nn_port = self.nn_port or port
 
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
               files=[], app_name="knit", queue="default"):
