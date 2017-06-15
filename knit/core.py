@@ -230,8 +230,8 @@ class Knit(object):
         callback_socket.listen(1)
         callback_host, callback_port = callback_socket.getsockname()
 
-        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--callbackHost", str(callback_host),
-                "--callbackPort", str(callback_port)]
+        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--callbackHost",
+                str(callback_host), "--callbackPort", str(callback_port)]
         
         on_windows = platform.system() == "Windows"
 
