@@ -142,6 +142,15 @@ class YARNAPI(object):
 
         return data
 
+    def kill_all(self, knit_only=True):
+        for app in self.apps:
+            stat = self.status(app)['app']
+            if knit_only and stat['name'] != 'knit':
+                continue
+            if stat['state'] == 'KILLED':
+                continue
+            self.kill(app)
+
     @check_app_id
     def kill(self, app_id):
         """

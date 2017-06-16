@@ -13,7 +13,7 @@ from subprocess import Popen, PIPE
 import struct
 import time
 
-from .utils import parse_xml
+from .utils import parse_xml, shell_out
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
 from .exceptions import HDFSConfigException, KnitException
@@ -41,7 +41,8 @@ confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get(
 
 class Knit(object):
     """
-    Connection to HDFS/YARN.
+    Connection to HDFS/YARN. Launches a single "application" master with a
+    number of worker containers.
     
     Parameter definition (nn, nn_port, rm, rm_port): those parameters given
     to __init__ take priority. If autodetect=True, Knit will attempt to fill
@@ -291,10 +292,17 @@ class Knit(object):
         upload = self.check_env_needs_upload(env)
         self.app_id = self.client.start(env, ','.join(files), app_name, queue, str(upload))
 
+        long_timeout = 30.0
         master_rpcport = -1
         while master_rpcport == -1:
             master_rpcport = self.client.masterRPCPort()
             time.sleep(0.2)
+            long_timeout -= 0.2
+            if long_timeout < 0:
+                break
+
+        if master_rpcport == -1:
+            raise Exception("YARN master container did not report back")
         master_rpchost = self.client.masterRPCHost()
 
         gateway = JavaGateway(GatewayClient(address=master_rpchost, port=master_rpcport), auto_convert=True)
@@ -394,8 +402,6 @@ class Knit(object):
 
         Parameters
         ----------
-        app_id: str
-             A yarn application ID string
         shell: bool
              Shell out to yarn CLI (default False)
 
@@ -429,8 +435,6 @@ class Knit(object):
 
         Parameters
         ----------
-        app_id: str
-            YARN application id
         timeout: int
             Time in seconds to wait for completion before killing (default 10s)
 
@@ -439,6 +443,7 @@ class Knit(object):
         bool:
             True if successful, False otherwise.
         """
+        # TODO: set app_id back to None?
         try:
             return self.client.kill()
         except Py4JError:
@@ -446,6 +451,10 @@ class Knit(object):
 
         # fallback
         return self.yarn_api.kill(self.app_id)
+
+    def __del__(self):
+        if self.app_id is not None:
+            self.kill()
 
     def status(self):
         """ Get status of an application
@@ -485,20 +494,20 @@ class Knit(object):
 
     def check_env_needs_upload(self, env_path):
         """Upload is needed if zip file does not exist in HDFS or is older"""
-        st = os.stat(env_path)
-        size = st.st_size
-        t = st.st_mtime
         try:
             import hdfs3
-        except ImportError:
-            return True
-        hdfs = hdfs3.HDFileSystem(self.nn, self.nn_port)
-        fn = '/user/root/.knitDeps/' + os.path.basename(env_path)
-        try:
+            st = os.stat(env_path)
+            size = st.st_size
+            t = st.st_mtime
+            hdfs = hdfs3.HDFileSystem(self.nn, int(self.nn_port))
+            fn = '/user/root/.knitDeps/' + os.path.basename(env_path)
             info = hdfs.info(fn)
-        except OSError:
+        except (ImportError, IOError, OSError):
             return True
         if info['size'] == size and t < info['last_mod']:
             return False
         else:
             return True
+
+    def clear_yarn(self):
+        shell
