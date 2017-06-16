@@ -22,6 +22,8 @@ def first_word(s):
 class DaskYARNCluster(object):
     """
     Implements a dask cluster with YARN containers running the worker processes.
+    A dask scheduler is started locally upon instantiation, but you must call
+    ``start()`` to initiate the building of containers by YARN.
     
     Parameters
     ----------
@@ -44,6 +46,8 @@ class DaskYARNCluster(object):
         ip = ip or socket.gethostbyname(socket.gethostname())
 
         self.env = env
+        self.application_master_container = None
+        self.app_id = None
 
         try:
             self.local_cluster = LocalCluster(n_workers=0, ip=ip)
@@ -63,23 +67,52 @@ class DaskYARNCluster(object):
     def scheduler_address(self):
         return self.local_cluster.scheduler_address
 
-    def start(self, n_workers, cpus=1, memory=4000):
+    def start(self, n_workers, cpus=1, memory=2048):
+        """
+        Initiate workers. If required, environment is first built and uploaded
+        to HDFS, and then a YARN application with the required number of
+        containers is created.
+        
+        Parameters
+        ----------
+        n_workers: int
+            How many containers to create
+        cpus: int=1
+            How many CPU cores is available in each container
+        memory: int=4000
+            Memory available to each dask worker (in MB)
+        
+        Returns
+        -------
+        YARN application ID.
+        """
+        c = CondaCreator()
         if self.env is None:
             env_name = 'dask-' + sha1(
                 '-'.join(self.packages).encode()).hexdigest()
-            if os.path.exists(
-                    os.path.join(CondaCreator().conda_envs, env_name + '.zip')):
-                self.env = os.path.join(CondaCreator().conda_envs,
-                                        env_name + '.zip')
+            env_path = os.path.join(c.conda_envs, env_name)
+            if os.path.exists(env_path + '.zip'):
+                # zipfile exists, ready to upload
+                self.env = env_path + '.zip'
+            elif os.path.exists(env_path):
+                # environment exists, can zip and upload
+                c.zip_env(env_path)
+                self.env = env_path + '.zip'
             else:
+                # create env from scratch
                 self.env = self.knit.create_env(env_name=env_name,
                                                 packages=self.packages)
+        elif not self.env.endswith('.zip'):
+            # given env directory, so zip it
+            c.zip_env(self.env)
+            self.env = self.env + '.zip'
 
+        # TODO: memory should not be total available?
         command = '$PYTHON_BIN $CONDA_PREFIX/bin/dask-worker --nprocs=1 ' \
                   '--nthreads=%d --memory-limit=%d %s > ' \
                   '/tmp/worker-log.out 2> /tmp/worker-log.err' % (
-                  cpus, memory * 1e6,
-                  self.local_cluster.scheduler.address)
+                      cpus, memory * 1e6,
+                      self.local_cluster.scheduler.address)
 
         app_id = self.knit.start(command, env=self.env,
                                  num_containers=n_workers,
@@ -104,11 +137,7 @@ class DaskYARNCluster(object):
     @property
     def workers(self):
         """
-        Update current worker ids
-
-        Returns
-        -------
-        list: list of container ids
+        list of running container ids
         """
 
         # remove container ...00001 -- this is applicationMaster's container and
@@ -124,6 +153,7 @@ class DaskYARNCluster(object):
         pass
 
     def stop(self):
+        """Kill the YARN application and all workers"""
         try:
             self.knit.kill()
         except AttributeError:
@@ -155,5 +185,9 @@ class DaskYARNCluster(object):
         return self
 
     def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        """Stop the scheduler and workers"""
         self.stop()
         self.local_cluster.close()

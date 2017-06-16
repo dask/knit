@@ -53,11 +53,11 @@ object Utils extends Logging {
     FileSystem.mkdirs(fs, stagingDirPath, new FsPermission(STAGING_DIR_PERMISSION))
 
     val replicationFactor = sys.env("REPLICATION_FACTOR").toShort
-    logging.info(s"Setting Replication Factor to: $replicationFactor")
+    logger.info(s"Setting Replication Factor to: $replicationFactor")
 
     val jarDepPath = Seq(sys.env("KNIT_HOME")).mkString(File.separator)
     val KNIT_JAR = new File(jarDepPath, "knit-1.0-SNAPSHOT.jar").getAbsolutePath()
-    logging.info(s"Attemping upload of $KNIT_JAR")
+    logger.info(s"Attemping upload of $KNIT_JAR")
 
     // upload all files to stagingDir
     List(KNIT_JAR).foreach {
@@ -74,7 +74,7 @@ object Utils extends Logging {
     val replicationFactor = sys.env("REPLICATION_FACTOR").toShort
 
     val FILE_PATH = new File(filePath).getAbsolutePath()
-    logging.info(s"Attemping upload of $FILE_PATH")
+    logger.info(s"Attemping upload of $FILE_PATH")
 
     // upload all files to stagingDir
     List(FILE_PATH).foreach {
@@ -96,12 +96,12 @@ object Utils extends Logging {
     var destPath = srcPath
     if (!compareFs(srcFs, destFs)) {
       destPath = new Path(destDir, srcPath.getName())
-      print(s"Uploading resource $srcPath -> $destPath")
+      logger.debug(s"Uploading resource $srcPath -> $destPath")
       FileUtil.copy(srcFs, srcPath, destFs, destPath, false, conf)
       destFs.setReplication(destPath, replication)
       destFs.setPermission(destPath, new FsPermission(APP_FILE_PERMISSION))
     } else {
-      logging.info(s"Source and destination file systems are the same. Not copying $srcPath")
+      logger.info(s"Source and destination file systems are the same. Not copying $srcPath")
     }
   }
   /*

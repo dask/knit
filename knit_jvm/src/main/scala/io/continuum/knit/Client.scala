@@ -55,7 +55,7 @@ object Client extends Logging {
     }
     
     val parsedArgs = parseArgs(args)
-    logger.debug(parsedArgs)
+    logger.debug(f"$parsedArgs%s")
     
     // Communicate the bound port back to the caller via the caller-specified callback port
     val callbackHost = parsedArgs.callbackHost
@@ -76,7 +76,7 @@ object Client extends Logging {
     System.exit(0)
   }
   
-  def start(pythonEnv: String, files: String, appName: String, queue: String) : String = {
+  def start(pythonEnv: String, files: String, appName: String, queue: String, upload: String) : String = {
     logger.info("Staring Application Master")
 
     implicit val conf = new YarnConfiguration()
@@ -87,7 +87,7 @@ object Client extends Logging {
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
     val KNIT_JAR = new Path(stagingDirPath, "knit-1.0-SNAPSHOT.jar")
     val KNIT_JAR_PATH = KNIT_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
-    logger.debug(KNIT_JAR_PATH)
+    logger.debug(f"$KNIT_JAR_PATH%s")
 
     // start a yarn client
     client = YarnClient.createYarnClient()

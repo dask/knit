@@ -64,6 +64,11 @@ class Knit(object):
         Autodetect NN/RM IP/Ports
     validate: bool
         Validate entered NN/RM IP/Ports match detected config file
+    upload_always: bool(=False)
+        If True, will upload conda environment zip always; otherwise will
+        attempt to check for the file's existence in HDFS (using the hdfs3
+        library, if present) and not upload if that matches the existing local
+        file in size and is newer.
 
     Examples
     --------
@@ -73,7 +78,8 @@ class Knit(object):
     """
 
     def __init__(self, nn=None, nn_port=None,  rm=None, rm_port=None,
-                 replication_factor=3, autodetect=False, validate=True):
+                 replication_factor=3, autodetect=False, validate=True,
+                 upload_always=False):
 
         self.nn = nn
         self.nn_port = str(nn_port) if nn_port is not None else None
@@ -101,7 +107,7 @@ class Knit(object):
 
     def __str__(self):
         return "Knit<NN={0}:{1};RM={2}:{3}>".format(self.nn, self.nn_port,
-                                                     self.rm, self.rm_port)
+                                                    self.rm, self.rm_port)
 
     __repr__ = __str__
 
@@ -247,9 +253,10 @@ class Knit(object):
             proc = Popen(args, stdin=PIPE)
 
         gateway_port = None
-        # We use select() here in order to avoid blocking indefinitely if the subprocess dies
-        # before connecting
-        while gateway_port is None and proc.poll() is None:
+        # We use select() here in order to avoid blocking indefinitely if the
+        # subprocess dies before connecting
+        long_timeout = 60
+        while gateway_port is None and proc.poll() is None and long_timeout > 0:
             timeout = 1  # (seconds)
             readable, _, _ = select.select([callback_socket], [], [], timeout)
             if callback_socket in readable:
@@ -258,6 +265,7 @@ class Knit(object):
                 gateway_port = read_int(gateway_connection.makefile(mode="rb"))
                 gateway_connection.close()
                 callback_socket.close()
+            long_timeout -= 1
 
         if gateway_port is None:
             raise Exception("Java gateway process exited before sending the driver its port number")
@@ -280,7 +288,8 @@ class Knit(object):
 
         gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
         self.client = gateway.entry_point
-        self.app_id = self.client.start(env, ','.join(files), app_name, queue)
+        upload = self.check_env_needs_upload(env)
+        self.app_id = self.client.start(env, ','.join(files), app_name, queue, str(upload))
 
         master_rpcport = -1
         while master_rpcport == -1:
@@ -396,7 +405,6 @@ class Knit(object):
             logs from each container (when possible)
         """
         return self.yarn_api.logs(self.app_id, shell=shell)
-    
 
     def wait_for_completion(self, timeout=10):
         """
@@ -414,7 +422,6 @@ class Knit(object):
             cur_status = self.runtime_status()
 
         return timeout > 0
-
 
     def kill(self, timeout=10):
         """
@@ -458,6 +465,8 @@ class Knit(object):
         str:
             status of application
         """
+        if self.client is None:
+            return "NONE"
         try:
             status = self.client.status()
             # rename finished to succeeded
@@ -473,3 +482,23 @@ class Knit(object):
         if final_status == 'UNDEFINED':
             return status['app']['state']
         return final_status
+
+    def check_env_needs_upload(self, env_path):
+        """Upload is needed if zip file does not exist in HDFS or is older"""
+        st = os.stat(env_path)
+        size = st.st_size
+        t = st.st_mtime
+        try:
+            import hdfs3
+        except ImportError:
+            return True
+        hdfs = hdfs3.HDFileSystem(self.nn, self.nn_port)
+        fn = '/user/root/.knitDeps/' + os.path.basename(env_path)
+        try:
+            info = hdfs.info(fn)
+        except OSError:
+            return True
+        if info['size'] == size and t < info['last_mod']:
+            return False
+        else:
+            return True

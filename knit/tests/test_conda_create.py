@@ -1,4 +1,5 @@
 import os
+import shutil
 import uuid
 import pytest
 import zipfile
@@ -12,6 +13,8 @@ def check_docker():
     return os.path.exists('/.dockerenv')
 
 inside_docker = check_docker
+env_name = 'test_env'
+
 
 @pytest.yield_fixture
 def c():
@@ -25,22 +28,22 @@ def test_miniconda_install(c):
 
 def test_create(c):
     with pytest.raises(TypeError):
-        env_name = str(uuid.uuid4())
-        c.create_env(env_name, packages='numpy')
+        uname = str(uuid.uuid4())
+        c.create_env(uname, packages='numpy')
 
-    env_name = 'test_env'
     env_path = os.path.join(c.conda_root, 'envs', env_name)
-    assert env_path == c._create_env(env_name, packages=['python=3', 'numpy'], remove=True)
+    assert env_path == c._create_env(env_name, packages=[
+        'python=3', 'numpy', 'nomkl'], remove=True)
 
     with pytest.raises(CondaException):
         c._create_env(env_name, packages=['pandas'])
 
 
 def test_full_create(c):
-    env_name = 'test_env'
     env_zip = os.path.join(c.conda_root, 'envs', env_name+'.zip')
-    assert env_zip == c.create_env(env_name, packages=['python=3', 'numpy'], remove=True)
-    assert os.path.getsize(env_zip) > 500000 # ensures zipfile has non-0 size
+    assert env_zip == c.create_env(env_name, packages=[
+        'python=3', 'numpy', 'nomkl'], remove=True)
+    assert os.path.getsize(env_zip) > 500000  # ensures zipfile has non-0 size
     assert zipfile.is_zipfile(env_zip)
 
     f = zipfile.ZipFile(env_zip, 'r')
@@ -51,7 +54,7 @@ def test_full_create(c):
 
 
 def test_find_env(c):
-    env_name = 'test_env'
+    # Must follow one of the _create tests above
     env_zip = os.path.join(c.conda_root, 'envs', env_name+'.zip')
     assert env_zip == c.create_env(env_name)
 
