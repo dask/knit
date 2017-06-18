@@ -123,7 +123,11 @@ object Client extends Logging {
 
     if (pythonEnv.nonEmpty) {
       //TODO: detect file suffix
-      uploadFile(pythonEnv)
+      if (upload == "True"){
+        uploadFile(pythonEnv)
+      } else {
+        logger.debug("Using cached environment")
+      }
       val envFile = new java.io.File(pythonEnv)
       val envZip = envFile.getName
       val envName = envZip.split('.').init(0)

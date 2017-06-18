@@ -292,7 +292,7 @@ class Knit(object):
         upload = self.check_env_needs_upload(env)
         self.app_id = self.client.start(env, ','.join(files), app_name, queue, str(upload))
 
-        long_timeout = 30.0
+        long_timeout = 100
         master_rpcport = -1
         while master_rpcport == -1:
             master_rpcport = self.client.masterRPCPort()
@@ -508,6 +508,3 @@ class Knit(object):
             return False
         else:
             return True
-
-    def clear_yarn(self):
-        shell

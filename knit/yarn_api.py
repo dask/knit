@@ -147,7 +147,7 @@ class YARNAPI(object):
             stat = self.status(app)['app']
             if knit_only and stat['name'] != 'knit':
                 continue
-            if stat['state'] == 'KILLED':
+            if stat['state'] not in ['KILLED', 'FINISHED']:
                 continue
             self.kill(app)
 
