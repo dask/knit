@@ -27,7 +27,7 @@ class DaskYARNCluster(object):
     
     Parameters
     ----------
-    nn, nn_port, rm, rm_port, autodetect, validate: see knit.Knit
+    nn, nn_port, rm, rm_port, user, autodetect, validate: see knit.Knit
     env: str or None
         If provided, the path of a zipped conda env to put in containers
     packages: list of str
@@ -40,7 +40,7 @@ class DaskYARNCluster(object):
     """
 
     def __init__(self, nn=None, nn_port=None, rm=None,
-                 rm_port=None, autodetect=True, validate=False,
+                 rm_port=None, user='root', autodetect=True, validate=False,
                  packages=None, ip=None, env=None):
 
         ip = ip or socket.gethostbyname(socket.gethostname())
@@ -59,7 +59,7 @@ class DaskYARNCluster(object):
             sorted(unique((packages or []) + global_packages, key=first_word)))
 
         self.knit = Knit(nn=nn, nn_port=nn_port, rm=rm, rm_port=rm_port,
-                         validate=validate, autodetect=autodetect)
+                         user=user, validate=validate, autodetect=autodetect)
 
         atexit.register(self.stop)
 

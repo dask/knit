@@ -59,7 +59,11 @@ class Knit(object):
         Resource Manager hostname
     rm_port: int
         Resource Manager port (default: 8088)
-    replication_factor: int
+    user: str ('root')
+        The user name from point of view of HDFS. This is only used when
+        checking for the existence of knit files on HDFS, since they are stored
+        in the user's home directory.
+    replication_factor: int (3)
         replication factor for files upload to HDFS (default: 3)
     autodetect: bool
         Autodetect NN/RM IP/Ports
@@ -79,9 +83,10 @@ class Knit(object):
     """
 
     def __init__(self, nn=None, nn_port=None,  rm=None, rm_port=None,
-                 replication_factor=3, autodetect=False, validate=True,
-                 upload_always=False):
+                 user='root', replication_factor=3, autodetect=False,
+                 validate=True, upload_always=False):
 
+        self.user = user
         self.nn = nn
         self.nn_port = str(nn_port) if nn_port is not None else None
 
@@ -96,6 +101,7 @@ class Knit(object):
 
         self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
         self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
+        self.upload_always = upload_always
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
@@ -429,14 +435,9 @@ class Knit(object):
 
         return timeout > 0
 
-    def kill(self, timeout=10):
+    def kill(self):
         """
         Method to kill a yarn application
-
-        Parameters
-        ----------
-        timeout: int
-            Time in seconds to wait for completion before killing (default 10s)
 
         Returns
         -------
@@ -492,15 +493,34 @@ class Knit(object):
             return status['app']['state']
         return final_status
 
+    def list_envs(self):
+        """List knit conda environments already in HDFS
+        
+        Looks in location /user/{user}/.knitDeps/ for zip-files
+        
+        Returns: list of dict
+            Details for each zip-file."""
+        try:
+            import hdfs3
+            hdfs = hdfs3.HDFileSystem(self.nn, int(self.nn_port))
+            files = hdfs.ls('/user/{}/.knitDeps/'.format(self.user), True)
+            return [f for f in files if f['name'].endswith('.zip')]
+        except (ImportError, IOError, OSError):
+            raise ImportError('HDFS3 library required to list HDFS '
+                              'environments')
+
     def check_env_needs_upload(self, env_path):
         """Upload is needed if zip file does not exist in HDFS or is older"""
+        if self.upload_always:
+            return True
         try:
             import hdfs3
             st = os.stat(env_path)
             size = st.st_size
             t = st.st_mtime
             hdfs = hdfs3.HDFileSystem(self.nn, int(self.nn_port))
-            fn = '/user/root/.knitDeps/' + os.path.basename(env_path)
+            fn = ('/user/{}/.knitDeps/'.format(self.user) +
+                  os.path.basename(env_path))
             info = hdfs.info(fn)
         except (ImportError, IOError, OSError):
             return True
