@@ -120,6 +120,10 @@ class YARNAPI(object):
         out = shell_out(cmd)
         return str(out)
 
+    def container_status(self, container_id):
+        cmd = ["yarn", "container", "-status", container_id]
+        return str(shell_out(cmd))
+
     @check_app_id
     def status(self, app_id):
         """ Get status of an application

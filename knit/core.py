@@ -352,6 +352,14 @@ class Knit(object):
         """
         return self.client.getContainers().split(',')
 
+    def get_container_statuses(self):
+        """Get status info for each container via CLI
+        
+        Returns dict where the values are the raw text output.
+        """
+        return {c: self.yarn_api.container_status(c)
+                for c in self.get_containers()}
+
     def remove_containers(self, container_id):
         """
         Method to remove containers from a running yarn app
