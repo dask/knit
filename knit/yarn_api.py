@@ -29,7 +29,6 @@ class YARNAPI(object):
         self.rm_port = rm_port
         self.host_port = "{0}:{1}".format(self.rm, self.rm_port)
 
-
     @property
     def apps(self):
         url = "http://{0}/ws/v1/cluster/apps/".format(self.host_port)
@@ -63,7 +62,8 @@ class YARNAPI(object):
         if not shell:
             try:
                 host_port = "{0}:{1}".format(self.rm, self.rm_port)
-                url = "http://{0}/ws/v1/cluster/apps/{1}".format(host_port, app_id)
+                url = "http://{0}/ws/v1/cluster/apps/{1}".format(
+                    host_port, app_id)
 
                 logger.debug("Getting Resource Manager Info: {0}".format(url))
                 r = requests.get(url)
@@ -72,7 +72,8 @@ class YARNAPI(object):
 
                 amHostHttpAddress = data['app']['amHostHttpAddress']
 
-                url = "http://{0}/ws/v1/node/containers".format(amHostHttpAddress)
+                url = "http://{0}/ws/v1/node/containers".format(
+                    amHostHttpAddress)
                 r = requests.get(url)
 
                 data = r.json()['containers']
@@ -87,7 +88,8 @@ class YARNAPI(object):
                     return "_".join(x.split("_")[1:3])
 
                 app_id_num = get_app_id_num(app_id)
-                containers = [d for d in container if get_app_id_num(d['id']) == app_id_num]
+                containers = [d for d in container
+                              if get_app_id_num(d['id']) == app_id_num]
 
                 logs = {}
                 for c in containers:
@@ -95,7 +97,8 @@ class YARNAPI(object):
 
                     # grab stdout
                     url = "{0}/stdout/?start=0".format(c['containerLogsLink'])
-                    logger.debug("Gather stdout/stderr data from {0}: {1}".format(c['nodeId'], url))
+                    logger.debug("Gather stdout/stderr data from {0}:"
+                                 " {1}".format(c['nodeId'], url))
                     r = requests.get(url)
                     log['stdout'] = r.text
 
@@ -109,13 +112,17 @@ class YARNAPI(object):
                 return logs
 
             except Exception:
-                logger.warn("Error while attempting to fetch logs, using fallback", exc_info=1)
+                logger.warning("Error while attempting to fetch logs,"
+                               " using fallback", exc_info=1)
 
         # fallback
         cmd = ["yarn", "logs", "-applicationId", app_id]
         out = shell_out(cmd)
         return str(out)
 
+    def container_status(self, container_id):
+        cmd = ["yarn", "container", "-status", container_id]
+        return str(shell_out(cmd))
 
     @check_app_id
     def status(self, app_id):
@@ -138,6 +145,15 @@ class YARNAPI(object):
         data = r.json()
 
         return data
+
+    def kill_all(self, knit_only=True):
+        for app in self.apps:
+            stat = self.status(app)['app']
+            if knit_only and stat['name'] != 'knit':
+                continue
+            if stat['state'] not in ['KILLED', 'FINISHED']:
+                continue
+            self.kill(app)
 
     @check_app_id
     def kill(self, app_id):

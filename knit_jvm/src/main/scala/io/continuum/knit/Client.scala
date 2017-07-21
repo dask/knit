@@ -33,7 +33,7 @@ import org.apache.log4j.Logger
  *
  */
 
-object Client extends Logging{
+object Client extends Logging {
   
   var client: YarnClient = _
   var appId: ApplicationId = _
@@ -55,7 +55,7 @@ object Client extends Logging{
     }
     
     val parsedArgs = parseArgs(args)
-    println(parsedArgs)
+    logger.debug(f"$parsedArgs%s")
     
     // Communicate the bound port back to the caller via the caller-specified callback port
     val callbackHost = parsedArgs.callbackHost
@@ -76,7 +76,7 @@ object Client extends Logging{
     System.exit(0)
   }
   
-  def start(pythonEnv: String, files: String, appName: String, queue: String) : String = {
+  def start(pythonEnv: String, files: String, appName: String, queue: String, upload: String) : String = {
     logger.info("Staring Application Master")
 
     implicit val conf = new YarnConfiguration()
@@ -87,7 +87,7 @@ object Client extends Logging{
     val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
     val KNIT_JAR = new Path(stagingDirPath, "knit-1.0-SNAPSHOT.jar")
     val KNIT_JAR_PATH = KNIT_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
-    println(KNIT_JAR_PATH)
+    logger.debug(f"$KNIT_JAR_PATH%s")
 
     // start a yarn client
     client = YarnClient.createYarnClient()
@@ -123,7 +123,11 @@ object Client extends Logging{
 
     if (pythonEnv.nonEmpty) {
       //TODO: detect file suffix
-      uploadFile(pythonEnv)
+      if (upload == "True"){
+        uploadFile(pythonEnv)
+      } else {
+        logger.debug("Using cached environment")
+      }
       val envFile = new java.io.File(pythonEnv)
       val envZip = envFile.getName
       val envName = envZip.split('.').init(0)

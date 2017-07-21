@@ -12,10 +12,12 @@ from .exceptions import CondaException
 from .utils import shell_out
 
 mini_file = "Miniconda-latest.sh"
-miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh",
-                 "darwin": "https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh",
-                 "win": "https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe"
-}
+miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/"
+                           "Miniconda3-latest-Linux-x86_64.sh",
+                  "darwin": "https://repo.continuum.io/miniconda/"
+                            "Miniconda3-latest-MacOSX-x86_64.sh",
+                  "win": "https://repo.continuum.io/miniconda/"
+                         "Miniconda3-latest-Windows-x86_64.exe"}
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +107,7 @@ class CondaCreator(object):
         env_name : str
         packages : list
         remove : bool
-            remove environment should it exist
+            remove environment should it exist - start from 
 
         Returns
         -------
@@ -118,24 +120,28 @@ class CondaCreator(object):
         env_path = os.path.join(self.conda_root, 'envs', env_name)
 
         if os.path.exists(env_path):
-            conda_list = shell_out([self.conda_bin, 'list', '-n', env_name]).split()
+            conda_list = shell_out(
+                [self.conda_bin, 'list', '-n', env_name]).split()
 
             # filter out python/python=3
-            pkgs = [p for p in packages if not 'python' in p]
+            pkgs = [p for p in packages if 'python' not in p]
 
             # try to be idempotent -- if packages exist don't recreate
-            if any(p in conda_list for p in packages):
+            if all(p in conda_list for p in pkgs):
                 return env_path
 
             if not remove:
-                raise CondaException("Conda environment: {0} already exists".format(env_name))
+                raise CondaException("Conda environment: {0} already exists"
+                                     " but does not contain {1}".format(
+                                        env_name, packages))
             else:
                 shutil.rmtree(env_path)
 
         if not isinstance(packages, list):
             raise TypeError("Packages must be a list of strings")
 
-        cmd = [self.conda_bin, 'create', '-p', env_path, '--copy', '-y', '-q'] + packages
+        cmd = [self.conda_bin, 'create', '-p', env_path, '--copy', '-y',
+               '-q'] + packages
         logger.info("Creating new env {0}".format(env_name))
         logger.info(' '.join(cmd))
 
@@ -218,7 +224,8 @@ class CondaCreator(object):
         try:
             for root, dirs, files in os.walk(env_path):
                 for file in files:
-                    relfile = os.path.join(os.path.relpath(root, self.conda_envs), file)
+                    relfile = os.path.join(
+                        os.path.relpath(root, self.conda_envs), file)
                     absfile = os.path.join(root, file)
                     f.write(absfile, relfile)
             return zFile

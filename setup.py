@@ -12,7 +12,7 @@ import versioneer
 #------------------------------------------------------------------------
 
 JAVA_SRC = "knit_jvm"
-jar_file = os.path.join(JAVA_SRC,"target", "knit-1.0-SNAPSHOT.jar")
+jar_file = os.path.join(JAVA_SRC, "target", "knit-1.0-SNAPSHOT.jar")
 
 with open('requirements.txt') as f:
     requires = f.read().splitlines()
@@ -30,14 +30,13 @@ if 'mvn' in sys.argv:
     os.chdir("..")
     sys.argv.remove("mvn")
 
-    java_lib_dir = os.path.join("knit","java_libs")
+    java_lib_dir = os.path.join("knit", "java_libs")
     if not os.path.exists(java_lib_dir):
         os.mkdir(java_lib_dir)
-    shutil.copy(jar_file,java_lib_dir)
+    shutil.copy(jar_file, java_lib_dir)
 
 setup(name='knit',
-      version=versioneer.get_version(),
-      cmdclass=versioneer.get_cmdclass(),
+      version="0.1.1",
       description='Python wrapper for YARN Application: distributed shell',
       url='http://github.com/dask/knit/',
       maintainer='Benjamin Zaitlen',
@@ -47,6 +46,6 @@ setup(name='knit',
       packages=['knit'],
       package_data={'knit': ['java_libs/knit-1.0-SNAPSHOT.jar']},
       install_requires=requires,
-      long_description=(open('README.rst').read() if os.path.exists('README.rst')
-                        else ''),
+      long_description=(open('README.rst').read()
+                        if os.path.exists('README.rst') else ''),
       zip_safe=False)
