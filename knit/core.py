@@ -228,6 +228,8 @@ class Knit(object):
         applicationId: str
             A yarn application ID string
         """
+        if self.app_id:
+            raise ValueError('Already started')
         if not isinstance(memory, int):
             raise KnitException("Memory argument must be an integer")
         if files:
