@@ -60,7 +60,7 @@ class CondaCreator(object):
         if not os.path.exists(self.conda_dir):
             os.mkdir(self.conda_dir)
 
-        mini_file = os.path.join(self.conda_dir, self.minifile_fp)
+        mini_file = self.minifile_fp
         if os.path.exists(mini_file):
             return mini_file
 

@@ -470,11 +470,11 @@ class Knit(object):
         """Upload is needed if zip file does not exist in HDFS or is older"""
         if self.upload_always:
             return True
-        if self.hdfs:
+        fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(env_path))
+        if self.hdfs and self.hdfs.exists(fn):
             st = os.stat(env_path)
             size = st.st_size
             t = st.st_mtime
-            fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(env_path))
             info = self.hdfs.info(fn)
             if info['size'] == size and t < info['last_mod']:
                 return False
