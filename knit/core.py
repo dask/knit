@@ -103,6 +103,7 @@ class Knit(object):
         self.client = None
         self.master = None
         self.app_id = None
+        self._hdfs = None
 
     def __str__(self):
         return "Knit<NN={0}:{1};RM={2}:{3}>".format(
@@ -431,19 +432,37 @@ class Knit(object):
             return status['app']['state']
         return final_status
 
+    @property
+    def hdfs(self):
+        """ An instance of HDFileSystem
+        
+        Useful for checking on the contents of the staging directory.
+        Will be automatically generated using this instance's configuration,
+        but can instead directly set ``self._hdfs`` if necessary.
+        """
+        if self._hdfs is None:
+            try:
+                import hdfs3
+                par2 = self.conf.copy()
+                par2['host'] = par2.pop('nn')
+                par2['port'] = par2.pop('nn_port')
+                del par2['rm_port']
+                self._hdfs = hdfs3.HDFileSystem(pars=par2)
+            except:
+                return
+        return self._hdfs
+
     def list_envs(self):
         """List knit conda environments already in HDFS
         
-        Looks in location /user/{user}/.knitDeps/ for zip-files
+        Looks staging directory for zip-files
         
         Returns: list of dict
             Details for each zip-file."""
-        try:
-            import hdfs3
-            hdfs = hdfs3.HDFileSystem(pars=self.conf)
-            files = hdfs.ls(self.hdfs_home + '/.knitDeps/', True)
+        if self.hdfs:
+            files = self.hdfs.ls(self.hdfs_home + '/.knitDeps/', True)
             return [f for f in files if f['name'].endswith('.zip')]
-        except (ImportError, IOError, OSError):
+        else:
             raise ImportError('HDFS3 library required to list HDFS '
                               'environments')
 
@@ -451,17 +470,15 @@ class Knit(object):
         """Upload is needed if zip file does not exist in HDFS or is older"""
         if self.upload_always:
             return True
-        try:
-            import hdfs3
+        if self.hdfs:
             st = os.stat(env_path)
             size = st.st_size
             t = st.st_mtime
-            hdfs = hdfs3.HDFileSystem(pars=self.conf)
             fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(env_path))
-            info = hdfs.info(fn)
-        except (ImportError, IOError, OSError):
-            return True
-        if info['size'] == size and t < info['last_mod']:
-            return False
+            info = self.hdfs.info(fn)
+            if info['size'] == size and t < info['last_mod']:
+                return False
+            else:
+                return True
         else:
             return True
