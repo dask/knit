@@ -84,7 +84,7 @@ object Client extends Logging {
     setDependencies()
 
     val stagingDir = ".knitDeps"
-    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+    val stagingDirPath = new Path(sys.env("HDFS_KNIT_DIR"), stagingDir)
     val KNIT_JAR = new Path(stagingDirPath, "knit-1.0-SNAPSHOT.jar")
     val KNIT_JAR_PATH = KNIT_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
     logger.debug(f"$KNIT_JAR_PATH%s")
@@ -116,7 +116,7 @@ object Client extends Logging {
         val name = file.getName  
 
         val fileUpload = Records.newRecord(classOf[LocalResource])
-        val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name).makeQualified(fs.getUri, fs.getWorkingDirectory)
+        val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name)
         setUpLocalResource(HDFS_FILE_UPLOAD, fileUpload)
       }
     }
@@ -132,7 +132,7 @@ object Client extends Logging {
       val envZip = envFile.getName
       val envName = envZip.split('.').init(0)
       val appMasterPython = Records.newRecord(classOf[LocalResource])
-      val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
+      val PYTHON_ZIP = new Path(stagingDirPath, envZip)
       setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
       localResources("PYTHON_DIR") = appMasterPython
       env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"

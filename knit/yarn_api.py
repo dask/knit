@@ -1,12 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
-import os
 import requests
 import logging
-from functools import wraps
+import re
 from subprocess import STDOUT
 
-from .utils import shell_out
+from .utils import shell_out, get_log_content
 from .exceptions import YARNException
 logger = logging.getLogger(__name__)
 
@@ -90,7 +89,9 @@ class YARNAPI(object):
         log: dictionary
             logs from each container (when possible)
         """
-        if not shell:
+        running = self.status(app_id)['app']['state'] == 'RUNNING'
+        if not shell and running:
+            # logs are held in memory only while app is running
             try:
                 containers = self.app_containers(app_id)
                 logs = {}
@@ -102,15 +103,14 @@ class YARNAPI(object):
                     logger.debug("Gather stdout/stderr data from {0}:"
                                  " {1}".format(c['nodeId'], url))
                     r = requests.get(url)
-                    log['stdout'] = r.text
+                    log['stdout'] = get_log_content(r.text)
 
                     # grab stderr
                     url = "{0}/stderr/?start=0".format(c['containerLogsLink'])
                     r = requests.get(url)
-                    log['stderr'] = r.text
+                    log['stderr'] = get_log_content(r.text)
 
                     logs[c['id']] = log
-
                 return logs
 
             except Exception:
@@ -121,7 +121,27 @@ class YARNAPI(object):
         # TODO: this is just a location in HDFS
         cmd = ["yarn", "logs", "-applicationId", app_id]
         out = shell_out(cmd)
-        return str(out)
+        logs = {}
+        container = None
+        ltype = 'stdout'
+        started = False
+        for line in out.split('\n'):
+            p = re.compile('Container: ([a-zA-Z0-9_]+) on ([a-zA-Z0-9_]+)')
+            r = p.match(line)
+            if r:
+                container, nodeID = r.groups()
+                logs[container] = dict(nodeId=nodeID, stdout='', stderr='')
+                started = False
+            elif line == 'LogType:stderr':
+                ltype = 'stderr'
+            elif line == 'LogType:stdout':
+                ltype = 'stdout'
+            elif line == "Log Contents:":
+                started = True
+            elif started:
+                logs[container][ltype] = logs[container][ltype] + '\n' + line
+
+        return logs
 
     def container_status(self, container_id):
         """Ask the YARN shell about the given container"""
