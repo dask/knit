@@ -19,11 +19,6 @@ with open('requirements.txt') as f:
 
 if 'mvn' in sys.argv:
 
-    # JAVA_HOME necessary for building
-    if not os.environ.get("JAVA_HOME"):
-        print("PLEASE SET JAVA_HOME")
-        sys.exit(1)
-
     os.chdir(JAVA_SRC)
     build_cmd = "mvn clean install -q"
     os.system(build_cmd)

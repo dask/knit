@@ -79,10 +79,10 @@ def hdfs_conf(confd, more_files=None):
         c['nn'] = ''
     if 'dfs.replication' in c:
         c['replication_factor'] = c['dfs.replication']
-    if 'yarn.resourcemanager.webapp.address' in conf:
+    if 'yarn.resourcemanager.webapp.address' in c:
         c['rm'], c['rm_port'] = c[
             'yarn.resourcemanager.webapp.address'].split(':')
-    elif 'yarn.resourcemanager.hostname' in conf:
+    elif 'yarn.resourcemanager.hostname' in c:
         c['rm'] = c['yarn.resourcemanager.hostname']
         c['rm_port'] = conf_defaults['rm_port']
     else:
