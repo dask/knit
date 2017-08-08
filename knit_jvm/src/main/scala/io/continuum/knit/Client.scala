@@ -7,6 +7,7 @@ import io.continuum.knit.ClientArguments.parseArgs
 import java.net._
 import java.util.Collections
 import java.io.DataOutputStream
+import java.nio.ByteBuffer
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
@@ -17,6 +18,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.io
+import org.apache.hadoop.io.DataOutputBuffer
 import org.apache.hadoop.security.{Credentials, UserGroupInformation}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records.{ContainerLaunchContext, _}
@@ -81,6 +83,9 @@ object Client extends Logging {
 
     implicit val conf = new YarnConfiguration()
     val fs = FileSystem.get(conf)
+    val cred = new Credentials()
+    val out = fs.addDelegationTokens("yarn", cred)
+
     setDependencies()
 
     val stagingDir = ".knitDeps"
@@ -97,6 +102,10 @@ object Client extends Logging {
     // application creation
     val app = client.createApplication()
     val amContainer = Records.newRecord(classOf[ContainerLaunchContext])
+
+    val dob = new DataOutputBuffer()
+    cred.writeTokenStorageToStream(dob)
+    amContainer.setTokens(ByteBuffer.wrap(dob.getData()))
 
     //add the jar which contains the Application master code to classpath
     val appMasterJar = Records.newRecord(classOf[LocalResource])
