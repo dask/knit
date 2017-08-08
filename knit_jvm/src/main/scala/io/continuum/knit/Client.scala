@@ -117,7 +117,7 @@ object Client extends Logging {
 
         val fileUpload = Records.newRecord(classOf[LocalResource])
         val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name)
-        setUpLocalResource(HDFS_FILE_UPLOAD, fileUpload)
+        setUpLocalResource(HDFS_FILE_UPLOAD.makeQualified(fs.getUri, fs.getWorkingDirectory), fileUpload)
       }
     }
 
@@ -133,7 +133,7 @@ object Client extends Logging {
       val envName = envZip.split('.').init(0)
       val appMasterPython = Records.newRecord(classOf[LocalResource])
       val PYTHON_ZIP = new Path(stagingDirPath, envZip)
-      setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
+      setUpLocalResource(PYTHON_ZIP.makeQualified(fs.getUri, fs.getWorkingDirectory), appMasterPython, archived = true)
       localResources("PYTHON_DIR") = appMasterPython
       env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
       env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"

@@ -468,6 +468,8 @@ class Knit(object):
 
     def check_env_needs_upload(self, env_path):
         """Upload is needed if zip file does not exist in HDFS or is older"""
+        if not env_path:
+            return False
         if self.upload_always:
             return True
         fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(env_path))
