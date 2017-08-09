@@ -162,10 +162,8 @@ class DaskYARNCluster(object):
 
     def stop(self):
         """Kill the YARN application and all workers"""
-        try:
+        if self.knit:
             self.knit.kill()
-        except AttributeError:
-            pass
 
     def add_workers(self, n_workers=1, cpus=1, memory=2048):
         """

@@ -5,6 +5,7 @@ import errno
 import pytest
 import signal
 import subprocess
+import time
 from functools import wraps
 
 from knit.dask_yarn import DaskYARNCluster
@@ -149,6 +150,7 @@ def test_yarn_cluster_add_stop(loop):
 
     # STOP ALL WORKERS!
     cluster.stop()
+    time.sleep(2)
 
     workers = client.scheduler_info()['workers']
     assert len(workers) == 0
