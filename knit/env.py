@@ -27,7 +27,7 @@ class CondaCreator(object):
     Create Conda Env
     """
 
-    def __init__(self, conda_root=None):
+    def __init__(self, conda_root=None, channels=[]):
         self.conda_dir = os.path.join(os.path.dirname(__file__), 'tmp_conda')
 
         self.minifile_fp = os.path.join(self.conda_dir, mini_file)
@@ -35,6 +35,7 @@ class CondaCreator(object):
         self.python_bin = os.path.join(self.conda_root, 'bin', 'python')
         self.conda_envs = os.path.join(self.conda_root, 'envs')
         self.conda_bin = os.path.join(self.conda_root, 'bin', 'conda')
+        self.channels = channels
 
     @property
     def miniconda_url(self):
@@ -140,8 +141,10 @@ class CondaCreator(object):
         if not isinstance(packages, list):
             raise TypeError("Packages must be a list of strings")
 
+        ch = []
+        [ch.extend(['-c', c]) for c in self.channels]
         cmd = [self.conda_bin, 'create', '-p', env_path, '--copy', '-y',
-               '-q'] + packages
+               '-q'] + packages + ch
         logger.info("Creating new env {0}".format(env_name))
         logger.info(' '.join(cmd))
 

@@ -34,19 +34,28 @@ class DaskYARNCluster(object):
         Packages to install in the env to provide to containers *if* env is 
         None. Uses conda spec for pinning versions. dask and distributed will
         always be included.
+    channels: list of str
+        If building an environment, pass these extra channels to conda using
+        ``-c`` (i.e., in addition but of superior priority to any system
+        default channels).
+    conda_root: str
+        Location of conda. If None, will download miniconda and produce an
+        isolated environment.
     ip: IP-like string or None
         Address for the scheduler to listen on. If not given, uses the system
         IP.
     """
 
     def __init__(self, autodetect=True, packages=None, ip=None, env=None,
-                 **kwargs):
+                 channels=None, conda_root=None, **kwargs):
 
         ip = ip or socket.gethostbyname(socket.gethostname())
 
         self.env = env
         self.application_master_container = None
         self.app_id = None
+        self.channels = channels
+        self.conda_root = conda_root
 
         try:
             self.local_cluster = LocalCluster(n_workers=0, ip=ip)
@@ -84,7 +93,8 @@ class DaskYARNCluster(object):
         -------
         YARN application ID.
         """
-        c = CondaCreator()
+        c = CondaCreator(channels=self.channels or [],
+                         conda_root=self.conda_root)
         if self.env is None:
             env_name = 'dask-' + sha1(
                 '-'.join(self.packages).encode()).hexdigest()
