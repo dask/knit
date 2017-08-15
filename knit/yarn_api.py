@@ -11,14 +11,15 @@ logger = logging.getLogger(__name__)
 
 
 class YARNAPI(object):
-    def __init__(self, rm, rm_port):
+    def __init__(self, rm, rm_port, scheme='http'):
         self.rm = rm
         self.rm_port = rm_port
+        self.scheme = scheme
         self.host_port = "{0}:{1}".format(self.rm, self.rm_port)
 
     @property
     def apps(self):
-        url = "http://{0}/ws/v1/cluster/apps/".format(self.host_port)
+        url = "{}://{0}/ws/v1/cluster/apps/".format(self.scheme, self.host_port)
         logger.debug("Getting Resource Manager Info: {0}".format(url))
         r = requests.get(url)
         data = r.json()
@@ -160,8 +161,8 @@ class YARNAPI(object):
         -------
         dictionary: status of application
         """
-        host_port = "{0}:{1}".format(self.rm, self.rm_port)
-        url = "http://{0}/ws/v1/cluster/apps/{1}".format(host_port, app_id)
+        url = "{0}://{1}/ws/v1/cluster/apps/{2}".format(self.scheme,
+                                                        self.host_port, app_id)
         logger.debug("Getting Application Info: {0}".format(url))
         r = requests.get(url)
         data = r.json()

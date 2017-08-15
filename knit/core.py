@@ -88,7 +88,11 @@ class Knit(object):
             self.conf.update(pars)
         self.conf.update(kwargs)
 
-        self.yarn_api = YARNAPI(conf['rm'], conf['rm_port'])
+        if conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
+            self.yarn_api = YARNAPI(conf['rm'], conf['rm_port_https'],
+                                    scheme='https')
+        else:
+            self.yarn_api = YARNAPI(conf['rm'], conf['rm_port'])
 
         self.KNIT_HOME = knit_home
         self.upload_always = upload_always
@@ -356,6 +360,14 @@ class Knit(object):
             logs from each container (when possible)
         """
         return self.yarn_api.logs(self.app_id, shell=shell)
+
+    def print_logs(self, shell=False):
+        """print out a more console-friendly version of logs()"""
+        for l, v in self.logs(shell).items():
+            print('Container ', l, ', id ', v['id'], '\n')
+            for part in ['stdout', 'stderr']:
+                print('##', part, '##')
+                print(v[part])
 
     def wait_for_completion(self, timeout=10):
         """

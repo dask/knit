@@ -25,7 +25,8 @@ DEFAULT_KNIT_HOME = os.environ.get('KNIT_HOME') or java_lib_dir
 
 # standard defaults
 conf_defaults = {'nn': 'localhost', 'nn_port': 8020, 'rm': 'localhost',
-                 'rm_port': 8088, 'replication_factor': 3}
+                 'rm_port': 8088, 'rm_port_https': 8090,
+                 'replication_factor': 3}
 conf = conf_defaults.copy()
 
 
@@ -79,6 +80,8 @@ def hdfs_conf(confd, more_files=None):
         c['nn'] = ''
     if 'dfs.replication' in c:
         c['replication_factor'] = c['dfs.replication']
+    else:
+        c['replication_factor'] = conf_defaults['replication_factor']
     if 'yarn.resourcemanager.webapp.address' in c:
         c['rm'], c['rm_port'] = c[
             'yarn.resourcemanager.webapp.address'].split(':')
@@ -88,6 +91,11 @@ def hdfs_conf(confd, more_files=None):
     else:
         c['rm'] = conf_defaults['rm']
         c['rm_port'] = conf_defaults['rm_port']
+    if 'yarn.resourcemanager.webapp.https.address' in c:
+        c['rm'], c['rm_port_https'] = c[
+            'yarn.resourcemanager.webapp.https.address'].split(':')
+    else:
+        c['rm_port_https'] = conf_defaults['rm_port_https']
     conf.clear()
     conf.update(c)
 
