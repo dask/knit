@@ -143,7 +143,7 @@ class CondaCreator(object):
 
         ch = []
         [ch.extend(['-c', c]) for c in self.channels]
-        cmd = [self.conda_bin, 'create', '-p', env_path, '--copy', '-y',
+        cmd = [self.conda_bin, 'create', '-p', env_path, '-y',
                '-q'] + packages + ch
         logger.info("Creating new env {0}".format(env_name))
         logger.info(' '.join(cmd))
