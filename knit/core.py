@@ -364,7 +364,7 @@ class Knit(object):
     def print_logs(self, shell=False):
         """print out a more console-friendly version of logs()"""
         for l, v in self.logs(shell).items():
-            print('Container ', l, ', id ', v['id'], '\n')
+            print('Container ', l, ', id ', v.get('id', 'None'), '\n')
             for part in ['stdout', 'stderr']:
                 print('##', part, '##')
                 print(v[part])

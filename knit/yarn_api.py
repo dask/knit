@@ -19,7 +19,7 @@ class YARNAPI(object):
 
     @property
     def apps(self):
-        url = "{}://{0}/ws/v1/cluster/apps/".format(self.scheme, self.host_port)
+        url = "{}://{}/ws/v1/cluster/apps/".format(self.scheme, self.host_port)
         logger.debug("Getting Resource Manager Info: {0}".format(url))
         r = requests.get(url)
         data = r.json()
