@@ -7,6 +7,7 @@ import io.continuum.knit.ClientArguments.parseArgs
 import java.net._
 import java.util.Collections
 import java.io.DataOutputStream
+import java.nio.ByteBuffer
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.{ArrayBuffer, HashMap}
@@ -17,6 +18,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.io
+import org.apache.hadoop.io.DataOutputBuffer
 import org.apache.hadoop.security.{Credentials, UserGroupInformation}
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records.{ContainerLaunchContext, _}
@@ -81,10 +83,13 @@ object Client extends Logging {
 
     implicit val conf = new YarnConfiguration()
     val fs = FileSystem.get(conf)
+    val cred = new Credentials()
+    val out = fs.addDelegationTokens("yarn", cred)
+
     setDependencies()
 
     val stagingDir = ".knitDeps"
-    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+    val stagingDirPath = new Path(sys.env("HDFS_KNIT_DIR"), stagingDir)
     val KNIT_JAR = new Path(stagingDirPath, "knit-1.0-SNAPSHOT.jar")
     val KNIT_JAR_PATH = KNIT_JAR.makeQualified(fs.getUri, fs.getWorkingDirectory)
     logger.debug(f"$KNIT_JAR_PATH%s")
@@ -97,6 +102,10 @@ object Client extends Logging {
     // application creation
     val app = client.createApplication()
     val amContainer = Records.newRecord(classOf[ContainerLaunchContext])
+
+    val dob = new DataOutputBuffer()
+    cred.writeTokenStorageToStream(dob)
+    amContainer.setTokens(ByteBuffer.wrap(dob.getData()))
 
     //add the jar which contains the Application master code to classpath
     val appMasterJar = Records.newRecord(classOf[LocalResource])
@@ -116,8 +125,8 @@ object Client extends Logging {
         val name = file.getName  
 
         val fileUpload = Records.newRecord(classOf[LocalResource])
-        val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name).makeQualified(fs.getUri, fs.getWorkingDirectory)
-        setUpLocalResource(HDFS_FILE_UPLOAD, fileUpload)
+        val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name)
+        setUpLocalResource(HDFS_FILE_UPLOAD.makeQualified(fs.getUri, fs.getWorkingDirectory), fileUpload)
       }
     }
 
@@ -132,8 +141,8 @@ object Client extends Logging {
       val envZip = envFile.getName
       val envName = envZip.split('.').init(0)
       val appMasterPython = Records.newRecord(classOf[LocalResource])
-      val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
-      setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
+      val PYTHON_ZIP = new Path(stagingDirPath, envZip)
+      setUpLocalResource(PYTHON_ZIP.makeQualified(fs.getUri, fs.getWorkingDirectory), appMasterPython, archived = true)
       localResources("PYTHON_DIR") = appMasterPython
       env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
       env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"

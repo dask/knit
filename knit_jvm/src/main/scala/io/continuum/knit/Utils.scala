@@ -45,7 +45,7 @@ object Utils extends Logging {
   def setDependencies()(implicit conf: YarnConfiguration) = {
     val fs = FileSystem.get(conf)
     val stagingDir = ".knitDeps"
-    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+    val stagingDirPath = new Path(sys.env("HDFS_KNIT_DIR"), stagingDir)
 
     // Staging directory is globally readable for now
     val STAGING_DIR_PERMISSION: FsPermission =
@@ -57,7 +57,7 @@ object Utils extends Logging {
 
     val jarDepPath = Seq(sys.env("KNIT_HOME")).mkString(File.separator)
     val KNIT_JAR = new File(jarDepPath, "knit-1.0-SNAPSHOT.jar").getAbsolutePath()
-    logger.info(s"Attemping upload of $KNIT_JAR")
+    logger.info(s"Attemping upload of $KNIT_JAR to $stagingDirPath")
 
     // upload all files to stagingDir
     List(KNIT_JAR).foreach {
@@ -74,7 +74,7 @@ object Utils extends Logging {
     val replicationFactor = sys.env("REPLICATION_FACTOR").toShort
 
     val FILE_PATH = new File(filePath).getAbsolutePath()
-    logger.info(s"Attemping upload of $FILE_PATH")
+    logger.info(s"Attemping upload of $FILE_PATH to $stagingDirPath")
 
     // upload all files to stagingDir
     List(FILE_PATH).foreach {

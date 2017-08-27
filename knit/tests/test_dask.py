@@ -2,13 +2,16 @@ import os
 import sys
 import time
 import errno
+import pytest
 import signal
 import subprocess
+import time
 from functools import wraps
 
 from knit.dask_yarn import DaskYARNCluster
-from knit import core
-from distributed import Client
+from knit.conf import conf, guess_config
+pytest.importorskip('dask.distributed')
+from dask.distributed import Client
 from distributed.utils_test import loop
 
 
@@ -33,24 +36,22 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
 
 def test_knit_config():
     cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
-                          validate=False, autodetect=False)
+                              autodetect=False)
+    str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
+    cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
+                              autodetect=True)
     str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
 
     try:
-        core.defaults['nn'] = 'nothost'
+        conf['nn'] = 'nothost'
         d = DaskYARNCluster(autodetect=True)
-        assert d.knit.nn == 'localhost'
-
-        d = DaskYARNCluster(autodetect=False)
-        assert d.knit.nn == 'nothost'
+        assert d.knit.conf['nn'] == 'nothost'
 
         d = DaskYARNCluster(autodetect=True, nn='oi')
-        assert d.knit.nn == 'oi'
+        assert d.knit.conf['nn'] == 'oi'
 
-        d = DaskYARNCluster(autodetect=True, nn='oi')
-        assert d.knit.nn == 'oi'
     finally:
-        core.defaults['nn'] = 'localhost'
+        guess_config()
 
 
 def test_yarn_cluster(loop):
@@ -64,10 +65,10 @@ def test_yarn_cluster(loop):
         try:
             start_dask()
         except Exception as e:
-            cluster.knit.kill(cluster.knit.app_id)
+            cluster.knit.kill()
             print("Fetching logs from failed test...")
             time.sleep(5)
-            print(cluster.knit.logs(cluster.knit.app_id))
+            print(cluster.knit.logs())
             print(subprocess.check_output(['free', '-m']))
             print(subprocess.check_output(['df', '-h']))
 
@@ -87,18 +88,18 @@ def test_yarn_cluster(loop):
             do_work()
         except Exception as e:
             print(subprocess.check_output(['free', '-m']))
-            cluster.knit.kill(cluster.knit.app_id)
+            cluster.knit.kill()
             print("Fetching logs from failed test...")
             time.sleep(5)
             print(subprocess.check_output(['free', '-m']))
-            print(cluster.knit.logs(cluster.knit.app_id))
+            print(cluster.knit.logs())
             print(subprocess.check_output(['df', '-h']))
             sys.exit(1)
 
 
 def test_yarn_cluster_add_stop(loop):
     python_version = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    python_pkg = 'python=%s' % (python_version)
+    python_pkg = 'python=%s' % python_version
 
     with DaskYARNCluster(packages=[python_pkg]) as _cluster:
         _cluster.start(1, cpus=1, memory=500)
@@ -149,6 +150,7 @@ def test_yarn_cluster_add_stop(loop):
 
     # STOP ALL WORKERS!
     cluster.stop()
+    time.sleep(2)
 
     workers = client.scheduler_info()['workers']
     assert len(workers) == 0

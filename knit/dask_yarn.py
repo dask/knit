@@ -27,27 +27,35 @@ class DaskYARNCluster(object):
     
     Parameters
     ----------
-    nn, nn_port, rm, rm_port, user, autodetect, validate: see knit.Knit
+    nn, nn_port, rm, rm_port, user, autodetect: see knit.Knit
     env: str or None
         If provided, the path of a zipped conda env to put in containers
     packages: list of str
         Packages to install in the env to provide to containers *if* env is 
         None. Uses conda spec for pinning versions. dask and distributed will
         always be included.
+    channels: list of str
+        If building an environment, pass these extra channels to conda using
+        ``-c`` (i.e., in addition but of superior priority to any system
+        default channels).
+    conda_root: str
+        Location of conda. If None, will download miniconda and produce an
+        isolated environment.
     ip: IP-like string or None
         Address for the scheduler to listen on. If not given, uses the system
         IP.
     """
 
-    def __init__(self, nn=None, nn_port=None, rm=None,
-                 rm_port=None, user='root', autodetect=True, validate=False,
-                 packages=None, ip=None, env=None):
+    def __init__(self, autodetect=True, packages=None, ip=None, env=None,
+                 channels=None, conda_root=None, **kwargs):
 
         ip = ip or socket.gethostbyname(socket.gethostname())
 
         self.env = env
         self.application_master_container = None
         self.app_id = None
+        self.channels = channels
+        self.conda_root = conda_root
 
         try:
             self.local_cluster = LocalCluster(n_workers=0, ip=ip)
@@ -58,8 +66,7 @@ class DaskYARNCluster(object):
         self.packages = list(
             sorted(unique((packages or []) + global_packages, key=first_word)))
 
-        self.knit = Knit(nn=nn, nn_port=nn_port, rm=rm, rm_port=rm_port,
-                         user=user, validate=validate, autodetect=autodetect)
+        self.knit = Knit(autodetect=autodetect, **kwargs)
 
         atexit.register(self.stop)
 
@@ -86,7 +93,8 @@ class DaskYARNCluster(object):
         -------
         YARN application ID.
         """
-        c = CondaCreator()
+        c = CondaCreator(channels=self.channels or [],
+                         conda_root=self.conda_root)
         if self.env is None:
             env_name = 'dask-' + sha1(
                 '-'.join(self.packages).encode()).hexdigest()
@@ -154,10 +162,8 @@ class DaskYARNCluster(object):
 
     def stop(self):
         """Kill the YARN application and all workers"""
-        try:
+        if self.knit:
             self.knit.kill()
-        except AttributeError:
-            pass
 
     def add_workers(self, n_workers=1, cpus=1, memory=2048):
         """

@@ -1,8 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import re
-import requests
 import logging
 import socket
 import atexit
@@ -13,6 +11,7 @@ from subprocess import Popen, PIPE
 import struct
 import time
 
+from .conf import conf, DEFAULT_KNIT_HOME
 from .utils import parse_xml, shell_out
 from .env import CondaCreator
 from .compatibility import FileNotFoundError, urlparse
@@ -24,19 +23,12 @@ from py4j.java_gateway import JavaGateway, GatewayClient
 
 logger = logging.getLogger(__name__)
 
-JAR_FILE = "knit-1.0-SNAPSHOT.jar"
-JAVA_APP = "io.continuum.knit.Client"
-
 
 def read_int(stream):
     length = stream.read(4)
     if not length:
         raise EOFError
     return struct.unpack("!i", length)[0]
-
-defaults = dict(nn='localhost', nn_port='8020', rm='localhost', rm_port='8088')
-confd = os.environ.get('HADOOP_CONF_DIR', os.environ.get(
-    'HADOOP_INSTALL', '') + '/hadoop/conf')
 
 
 class Knit(object):
@@ -63,17 +55,20 @@ class Knit(object):
         The user name from point of view of HDFS. This is only used when
         checking for the existence of knit files on HDFS, since they are stored
         in the user's home directory.
+    hdfs_home: str
+        Explicit location of a writable directory in HDFS to store files. 
+        Defaults to the user 'home': hdfs://user/<username>/
     replication_factor: int (3)
         replication factor for files upload to HDFS (default: 3)
     autodetect: bool
-        Autodetect NN/RM IP/Ports
-    validate: bool
-        Validate entered NN/RM IP/Ports match detected config file
+        Autodetect configuration
     upload_always: bool(=False)
         If True, will upload conda environment zip always; otherwise will
         attempt to check for the file's existence in HDFS (using the hdfs3
         library, if present) and not upload if that matches the existing local
         file in size and is newer.
+    knit_home: str
+        Location of knit's jar
 
     Examples
     --------
@@ -82,115 +77,48 @@ class Knit(object):
     >>> app_id = k.start('sleep 100', num_containers=5, memory=1024)
     """
 
-    def __init__(self, nn=None, nn_port=None,  rm=None, rm_port=None,
-                 user='root', replication_factor=3, autodetect=False,
-                 validate=True, upload_always=False):
+    JAR_FILE = "knit-1.0-SNAPSHOT.jar"
+    JAVA_APP = "io.continuum.knit.Client"
 
-        self.user = user
-        self.nn = nn
-        self.nn_port = str(nn_port) if nn_port is not None else None
+    def __init__(self, autodetect=True, upload_always=False, hdfs_home=None,
+                 knit_home=DEFAULT_KNIT_HOME, pars=None, **kwargs):
 
-        self.rm = rm
-        self.rm_port = str(rm_port) if nn_port is not None else None
-        self.replication_factor = replication_factor
+        self.conf = conf.copy() if autodetect else {}
+        if pars:
+            self.conf.update(pars)
+        self.conf.update(kwargs)
 
-        self._hdfs_conf(autodetect, validate)
-        self._yarn_conf(autodetect, validate)
+        if conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
+            self.yarn_api = YARNAPI(conf['rm'], conf['rm_port_https'],
+                                    scheme='https')
+        else:
+            self.yarn_api = YARNAPI(conf['rm'], conf['rm_port'])
 
-        self.yarn_api = YARNAPI(self.rm, self.rm_port)
-
-        self.java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
-        self.KNIT_HOME = os.environ.get('KNIT_HOME') or self.java_lib_dir
+        self.KNIT_HOME = knit_home
         self.upload_always = upload_always
+        self.hdfs_home = hdfs_home or conf.get('dfs.user.home.base.dir',
+                                               '/user/' + conf['user'])
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
-        os.environ['REPLICATION_FACTOR'] = str(self.replication_factor)
-        os.environ['REPLICATION_FACTOR'] = str(self.replication_factor)
+        os.environ['REPLICATION_FACTOR'] = str(conf['replication_factor'])
+        os.environ['HDFS_KNIT_DIR'] = self.hdfs_home
 
         self.client = None
         self.master = None
         self.app_id = None
+        self._hdfs = None
 
     def __str__(self):
-        return "Knit<NN={0}:{1};RM={2}:{3}>".format(self.nn, self.nn_port,
-                                                    self.rm, self.rm_port)
+        return "Knit<NN={0}:{1};RM={2}:{3}>".format(
+            self.conf['nn'], self.conf['nn_port'], self.conf['rm'],
+            self.conf['rm_port'])
 
     __repr__ = __str__
 
     @property
     def JAR_FILE_PATH(self):
-        return os.path.join(self.KNIT_HOME, JAR_FILE)
-
-    def _yarn_conf(self, autodetect=False, validate=False):
-        """
-        Load YARN config from default locations.
-        
-        Parameters
-        ----------
-        autodetect: bool
-            Find and use system config file
-        validate: bool
-            Assure that any provided parameters match system config file
-        """
-        yarn_site = os.path.join(confd, 'yarn-site.xml')
-        try:
-            if autodetect:
-                with open(yarn_site, 'r') as f:
-                    conf = parse_xml(f, 'yarn.resourcemanager.webapp.address')
-                host, port = conf['host'], conf['port']
-            else:
-                host, port = defaults['rm'], defaults['rm_port']
-        except (FileNotFoundError, KeyError):
-            host, port = defaults['rm'], defaults['rm_port']
-
-        if self.rm and self.rm != host and validate:
-            msg = ("Possible Resource Manager hostname mismatch.  "
-                   "Detected {0}").format(host)
-            raise HDFSConfigException(msg)
-
-        if self.rm_port and str(self.rm_port) != port and validate:
-            msg = ("Possible Resource Manager port mismatch.  "
-                   "Detected {0}").format(port)
-            raise HDFSConfigException(msg)
-
-        self.rm = self.rm or host
-        self.rm_port = self.rm_port or port
-
-    def _hdfs_conf(self, autodetect=False, validate=False):
-        """
-        Load HDFS config from default locations.
-        
-        Parameters
-        ----------
-        autodetect: bool
-            Find and use system config file
-        validate: bool
-            Assure that any provided parameters match system config file
-        """
-        core_site = os.path.join(confd, 'core-site.xml')
-        try:
-            if autodetect:
-                with open(core_site, 'r') as f:
-                    conf = parse_xml(f, 'fs.defaultFS')
-                host, port = conf['host'], conf['port']
-            else:
-                host, port = defaults['nn'], defaults['nn_port']
-        except (FileNotFoundError, KeyError):
-            host, port = defaults['nn'], defaults['nn_port']
-
-        if self.nn and self.nn != host and validate:
-            msg = ("Possible Resource Manager hostname mismatch.  "
-                   "Detected {0}").format(host)
-            raise HDFSConfigException(msg)
-
-        if self.nn_port and str(self.nn_port) != port and validate:
-            msg = ("Possible Resource Manager port mismatch.  "
-                   "Detected {0}").format(port)
-            raise HDFSConfigException(msg)
-
-        self.nn = self.nn or host
-        self.nn_port = self.nn_port or port
+        return os.path.join(self.KNIT_HOME, self.JAR_FILE)
 
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
               files=[], app_name="knit", queue="default"):
@@ -228,6 +156,8 @@ class Knit(object):
         applicationId: str
             A yarn application ID string
         """
+        if self.app_id:
+            raise ValueError('Already started')
         if not isinstance(memory, int):
             raise KnitException("Memory argument must be an integer")
         if files:
@@ -243,8 +173,9 @@ class Knit(object):
         callback_socket.listen(1)
         callback_host, callback_port = callback_socket.getsockname()
 
-        args = ["hadoop", "jar", self.JAR_FILE_PATH, JAVA_APP, "--callbackHost",
-                str(callback_host), "--callbackPort", str(callback_port)]
+        args = ["hadoop", "jar", self.JAR_FILE_PATH, self.JAVA_APP,
+                "--callbackHost", str(callback_host), "--callbackPort",
+                str(callback_port)]
         
         on_windows = platform.system() == "Windows"
 
@@ -275,7 +206,8 @@ class Knit(object):
             long_timeout -= 1
 
         if gateway_port is None:
-            raise Exception("Java gateway process exited before sending the driver its port number")
+            raise Exception("Java gateway process exited before sending the"
+                            " driver its port number")
 
         # In Windows, ensure the Java child processes do not linger after Python has exited.
         # In UNIX-based systems, the child process can kill itself on broken pipe (i.e. when
@@ -296,7 +228,8 @@ class Knit(object):
         gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
         self.client = gateway.entry_point
         upload = self.check_env_needs_upload(env)
-        self.app_id = self.client.start(env, ','.join(files), app_name, queue, str(upload))
+        self.app_id = self.client.start(env, ','.join(files), app_name, queue,
+                                        str(upload))
 
         long_timeout = 100
         master_rpcport = -1
@@ -311,9 +244,11 @@ class Knit(object):
             raise Exception("YARN master container did not report back")
         master_rpchost = self.client.masterRPCHost()
 
-        gateway = JavaGateway(GatewayClient(address=master_rpchost, port=master_rpcport), auto_convert=True)
+        gateway = JavaGateway(GatewayClient(
+            address=master_rpchost, port=master_rpcport), auto_convert=True)
         self.master = gateway.entry_point
-        self.master.init(env, ','.join(files), cmd, num_containers, virtual_cores, memory)
+        self.master.init(env, ','.join(files), cmd, num_containers,
+                         virtual_cores, memory)
 
         return self.app_id
 
@@ -426,6 +361,14 @@ class Knit(object):
         """
         return self.yarn_api.logs(self.app_id, shell=shell)
 
+    def print_logs(self, shell=False):
+        """print out a more console-friendly version of logs()"""
+        for l, v in self.logs(shell).items():
+            print('Container ', l, ', id ', v.get('id', 'None'), '\n')
+            for part in ['stdout', 'stderr']:
+                print('##', part, '##')
+                print(v[part])
+
     def wait_for_completion(self, timeout=10):
         """
         Wait for completion of the yarn application
@@ -501,38 +444,55 @@ class Knit(object):
             return status['app']['state']
         return final_status
 
+    @property
+    def hdfs(self):
+        """ An instance of HDFileSystem
+        
+        Useful for checking on the contents of the staging directory.
+        Will be automatically generated using this instance's configuration,
+        but can instead directly set ``self._hdfs`` if necessary.
+        """
+        if self._hdfs is None:
+            try:
+                import hdfs3
+                par2 = self.conf.copy()
+                par2['host'] = par2.pop('nn')
+                par2['port'] = par2.pop('nn_port')
+                del par2['rm_port']
+                self._hdfs = hdfs3.HDFileSystem(pars=par2)
+            except:
+                return
+        return self._hdfs
+
     def list_envs(self):
         """List knit conda environments already in HDFS
         
-        Looks in location /user/{user}/.knitDeps/ for zip-files
+        Looks staging directory for zip-files
         
         Returns: list of dict
             Details for each zip-file."""
-        try:
-            import hdfs3
-            hdfs = hdfs3.HDFileSystem(self.nn, int(self.nn_port))
-            files = hdfs.ls('/user/{}/.knitDeps/'.format(self.user), True)
+        if self.hdfs:
+            files = self.hdfs.ls(self.hdfs_home + '/.knitDeps/', True)
             return [f for f in files if f['name'].endswith('.zip')]
-        except (ImportError, IOError, OSError):
+        else:
             raise ImportError('HDFS3 library required to list HDFS '
                               'environments')
 
     def check_env_needs_upload(self, env_path):
         """Upload is needed if zip file does not exist in HDFS or is older"""
+        if not env_path:
+            return False
         if self.upload_always:
             return True
-        try:
-            import hdfs3
+        fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(env_path))
+        if self.hdfs and self.hdfs.exists(fn):
             st = os.stat(env_path)
             size = st.st_size
             t = st.st_mtime
-            hdfs = hdfs3.HDFileSystem(self.nn, int(self.nn_port))
-            fn = ('/user/{}/.knitDeps/'.format(self.user) +
-                  os.path.basename(env_path))
-            info = hdfs.info(fn)
-        except (ImportError, IOError, OSError):
-            return True
-        if info['size'] == size and t < info['last_mod']:
-            return False
+            info = self.hdfs.info(fn)
+            if info['size'] == size and t < info['last_mod']:
+                return False
+            else:
+                return True
         else:
             return True

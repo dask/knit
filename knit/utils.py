@@ -93,3 +93,12 @@ def shell_out(cmd=None, **kwargs):
         result of shell command
     """
     return check_output(cmd, **kwargs).decode('utf-8')
+
+
+def get_log_content(s):
+    if 'Cannot find this log' in s:
+        return ''
+    st = """<td class="content">"""
+    ind0 = s.find(st) + len(st)
+    ind1 = s[ind0:].find("</td>")
+    return s[ind0:ind0+ind1]

@@ -4,9 +4,11 @@ import java.io._
 import java.net._
 import java.nio.ByteBuffer
 import java.util.Collections
+import scala.collection.JavaConversions._
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.io.DataOutputBuffer
 import org.apache.hadoop.yarn.api.ApplicationConstants
 import org.apache.hadoop.yarn.api.records._
 import org.apache.hadoop.yarn.api.protocolrecords._ 
@@ -36,6 +38,7 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
 
   var registerResponse : RegisterApplicationMasterResponse = _
   var outstandingRequests = List[ContainerRequest]()
+  var cred: Credentials = _
   
   var files: String = _
   var pythonEnv: String = _
@@ -70,6 +73,14 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
     
     conf = new YarnConfiguration()
     fs = FileSystem.get(conf)
+    UserGroupInformation.isSecurityEnabled()
+    val creds = UserGroupInformation.getCurrentUser().getCredentials()
+    cred = new Credentials(creds)
+    val nots = creds.numberOfTokens()
+    logger.info(f"Number of tokens: $nots")
+    for (tok <- creds.getAllSecretKeys()) {
+        logger.info(f"TOKEN: $tok")
+    }
 
     // Create a client to talk to the RM
     rmClient = AMRMClientAsync.createAMRMClientAsync[ContainerRequest](1000, this)
@@ -177,6 +188,7 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
           // set up local ENV
           env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
           env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
+          env("LC_ALL") = "C.UTF-8"
           localResources("PYTHON_DIR") = appMasterPython
         }
   
@@ -190,7 +202,15 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
               " 2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/stderr"
           ).asJava
         )
-    
+
+        val dob = new DataOutputBuffer()
+        for (tok <- cred.getAllTokens()) {
+            logger.info(f"TOKEN ADDED: $tok")
+        }
+
+        cred.writeTokenStorageToStream(dob)
+        ctx.setTokens(ByteBuffer.wrap(dob.getData()))
+
         ctx.setLocalResources(localResources.asJava)
         ctx.setEnvironment(env.asJava)
     
