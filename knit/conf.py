@@ -47,7 +47,7 @@ def hdfs_conf(confd, more_files=None):
     for afile in files:
         try:
             c.update(conf_to_dict(os.sep.join([confd, afile])))
-        except FileNotFoundError:
+        except (IOError, OSError):
             pass
     if not c:
         # no config files here
