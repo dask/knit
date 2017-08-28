@@ -31,8 +31,8 @@ if 'mvn' in sys.argv:
     shutil.copy(jar_file, java_lib_dir)
 
 setup(name='knit',
-      version="0.1.1",
-      description='Python wrapper for YARN Application: distributed shell',
+      version="0.2.1",
+      description='Python wrapper for YARN Applications',
       url='http://github.com/dask/knit/',
       maintainer='Benjamin Zaitlen',
       maintainer_email='bzaitlen@continuum.io',
