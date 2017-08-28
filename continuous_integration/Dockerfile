@@ -8,8 +8,8 @@ RUN /bin/bash /tmp/miniconda.sh -b -p /opt/anaconda
 RUN rm /tmp/miniconda.sh
 ENV PATH /usr/local/hadoop-2.7.1/bin:/opt/anaconda/bin:$PATH
 RUN conda install -y -q pip coverage pytest requests maven lxml -c conda-forge
-RUN conda create -y -q -n py36 coverage python=3.6 pytest requests maven lxml -c conda-forge
-RUN conda create -y -q -n py35 coverage python=3.5 pytest requests maven lxml -c conda-forge
+RUN conda create -y -q -n py36 coverage python=3.6 pytest requests maven lxml dask distributed -c conda-forge
+RUN conda create -y -q -n py35 coverage python=3.5 pytest requests maven lxml dask distributed -c conda-forge
 RUN /opt/anaconda/bin/pip install coveralls
 RUN /opt/anaconda/envs/py36/bin/pip install coveralls
 RUN /opt/anaconda/envs/py35/bin/pip install coveralls
