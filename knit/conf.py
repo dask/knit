@@ -127,6 +127,8 @@ def guess_config():
     if 'LIBHDFS3_CONF' in os.environ:
         fdir, fn = os.path.split(os.environ['LIBHDFS3_CONF'])
         hdfs_conf(fdir, more_files=[fn, 'yarn-site.xml'])
+        if not os.path.exists(os.environ['LIBHDFS3_CONF']):
+            del os.environ['LIBHDFS3_CONF']
         return
     elif 'HADOOP_CONF_DIR' in os.environ:
         d = os.environ['HADOOP_CONF_DIR']
@@ -144,7 +146,8 @@ def guess_config():
         # fallback: local dir
         d = os.getcwd()
     hdfs_conf(d, more_files=['yarn-site.xml'])
-    os.environ['LIBHDFS3_CONF'] = os.path.join(d, 'hdfs-site.xml')
+    if os.path.exists(os.path.join(d, 'hdfs-site.xml')):
+        os.environ['LIBHDFS3_CONF'] = os.path.join(d, 'hdfs-site.xml')
 
 
 guess_config()
