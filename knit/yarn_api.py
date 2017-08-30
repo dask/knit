@@ -167,6 +167,8 @@ class YARNAPI(object):
         r = requests.get(url)
         data = r.json()
         logger.debug(data)
+        if 'RemoteException' in data:
+            raise YARNException(data['RemoteException']['message'])
         return data
 
     def kill_all(self, knit_only=True):
@@ -201,6 +203,8 @@ class YARNAPI(object):
         """
 
         cmd = ["yarn", "application", "-kill", app_id]
-        out = shell_out(cmd, stderr=STDOUT)
-
-        return "Killed application" in out
+        try:
+            out = shell_out(cmd, stderr=STDOUT)
+            return "Killed application" in out
+        except:
+            return False

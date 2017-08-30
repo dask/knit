@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import errno
 import pytest
 import signal
@@ -8,9 +7,10 @@ import subprocess
 import time
 from functools import wraps
 
+pytest.importorskip('dask')
+import dask.distributed
 from knit.dask_yarn import DaskYARNCluster
 from knit.conf import conf, guess_config
-pytest.importorskip('dask.distributed')
 from dask.distributed import Client
 from distributed.utils_test import loop
 
