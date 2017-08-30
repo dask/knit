@@ -44,32 +44,6 @@ def k():
     yield knitter
 
 
-def test_port():
-    with pytest.raises(HDFSConfigException):
-        Knit(nn_port=90000, rm_port=90000)
-    with pytest.raises(HDFSConfigException):
-        Knit(nn_port=90000, rm_port=8088)
-    with pytest.raises(HDFSConfigException):
-        Knit(nn_port=9000, rm_port=5000)
-
-    if inside_docker:
-        # should pass without incident
-        Knit(nn_port=8020, rm_port=8088)
-
-
-def test_hostname(k):
-    with pytest.raises(HDFSConfigException):
-        Knit(nn="foobarbiz")
-    with pytest.raises(HDFSConfigException):
-        Knit(rm="foobarbiz")
-
-    if inside_docker:
-        # should pass without incident
-        Knit(nn="localhost")
-        k = Knit(autodetect=True)
-        str(k) == 'Knit<NN=localhost:8020;RM=localhost:8088>'
-
-
 def test_argument_parsing(k):
     cmd = "sleep 10"
     with pytest.raises(KnitException):
@@ -80,17 +54,18 @@ def test_argument_parsing(k):
 
 
 def test_cmd(k):
-    cmd = "python -c 'import socket; print(socket.gethostname()*2)'"
+    cmd = "hostname"
     k.start(cmd, memory=128)
+    logs0 = k.logs()
 
     if not k.wait_for_completion(30):
         k.kill()
 
-    hostname = socket.gethostname() * 2
-    logs = k.logs(shell=True)
-    print(logs)
+    hostname = socket.gethostname()
+    logs1 = k.logs(shell=True)
 
-    assert hostname in logs, logs
+    assert hostname in str(logs0)
+    assert hostname in str(logs1)
 
 
 def test_multiple_containers(k):
@@ -165,15 +140,16 @@ def test_memory(k):
 
 
 def test_cmd_w_conda_env(k):
-    env_zip = k.create_env(env_name='dev', packages=['python=2.6'], remove=True)
+    env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
     cmd = "$PYTHON_BIN -c 'import sys; print(sys.version_info); import random; print(str(random.random()))'"
     k.start(cmd, env=env_zip)
 
     if not k.wait_for_completion(30):
         k.kill()
 
+    time.sleep(5)  # log aggregation
     logs = k.logs(shell=True)
-    assert "(2, 6, 9, 'final', 0)" in logs, logs
+    assert "(2, 6, 9, 'final', 0)" in str(logs)
 
 
 cur_dir = os.path.dirname(__file__)
@@ -188,8 +164,9 @@ def test_file_uploading(k):
     if not k.wait_for_completion(30):
         k.kill()
 
-    logs = k.logs(shell=True)
-    assert "rambling on" in logs, logs
+    time.sleep(5)
+    logs = k.logs()
+    assert "rambling on" in str(logs), str(logs)
 
 
 def test_kill_status(k):

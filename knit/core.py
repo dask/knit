@@ -12,10 +12,8 @@ import struct
 import time
 
 from .conf import conf, DEFAULT_KNIT_HOME
-from .utils import parse_xml, shell_out
 from .env import CondaCreator
-from .compatibility import FileNotFoundError, urlparse
-from .exceptions import HDFSConfigException, KnitException
+from .exceptions import KnitException
 from .yarn_api import YARNAPI
 
 from py4j.protocol import Py4JError
@@ -395,18 +393,24 @@ class Knit(object):
         bool:
             True if successful, False otherwise.
         """
-        # TODO: set app_id back to None?
+        if self.client is None:
+            # never started, can't stop - should be warning or exception?
+            return False
         try:
-            return self.client.kill()
+            self.client.kill()
         except Py4JError:
             logger.debug("Error while attempting to kill", exc_info=1)
-
-        # fallback
-        return self.yarn_api.kill(self.app_id)
+            # fallback
+            self.yarn_api.kill(self.app_id)
+        out = self.status()['app']['finalStatus'] == 'KILLED'
+        return out
 
     def __del__(self):
         if self.app_id is not None:
-            self.kill()
+            try:
+                self.kill()
+            except:
+                pass
 
     def status(self):
         """ Get status of an application

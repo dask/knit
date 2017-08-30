@@ -7,6 +7,7 @@ cur_dir = os.path.dirname(__file__)
 core_site = os.path.join(cur_dir, 'files', 'core-site.xml')
 yarn_site = os.path.join(cur_dir, 'files', 'yarn-site.xml')
 
+
 def check_docker():
     """check if inside docker container"""
     return os.path.exists('/.dockerenv')
