@@ -14,7 +14,7 @@ services:
   - docker
 
 before_install:
-  - docker run -d -name knit_test -v $PWD:/knit mdurant/hadoop
+  - docker run --name knit_test -d -v $PWD:/knit mdurant/hadoop
   - export CONTAINER_ID=`docker ps | grep knit_test | awk '{print $1}'`
   - sleep 20
 

@@ -38,7 +38,7 @@ To start a dask cluster on YARN
    from knit import dask_yarn
    cluster = dask_yarn.DaskYARNCluster()
    cluster.start(nworkers=4, memory=1024, cpus=2)
-   
+
 
 .. _documentation: http://knit.readthedocs.io/en/latest/
 
