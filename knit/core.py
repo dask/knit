@@ -171,6 +171,9 @@ class Knit(object):
         callback_socket.listen(1)
         callback_host, callback_port = callback_socket.getsockname()
 
+        if not os.path.exists(self.JAR_FILE_PATH):
+            raise KnitException('JAR file %s does not exists - please build'
+                                ' with maven' % self.JAR_FILE_PATH)
         args = ["hadoop", "jar", self.JAR_FILE_PATH, self.JAVA_APP,
                 "--callbackHost", str(callback_host), "--callbackPort",
                 str(callback_port)]
