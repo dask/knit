@@ -5,7 +5,7 @@ from .utils import *
 from .core import *
 try:
     from .dask_yarn import DaskYARNCluster
-except ImportError:
+except ImportError:    # pragma: no cover
     warnings.warn('dask/distributed not installed, '
                   'DaskYARNCluster not available')
 
