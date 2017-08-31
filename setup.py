@@ -5,8 +5,6 @@ import sys
 import shutil
 from setuptools import setup
 
-import versioneer
-
 #------------------------------------------------------------------------
 # Optional building with MAVEN
 #------------------------------------------------------------------------

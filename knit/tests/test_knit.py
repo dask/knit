@@ -61,6 +61,7 @@ def test_cmd(k):
     if not k.wait_for_completion(30):
         k.kill()
 
+    time.sleep(5)
     hostname = socket.gethostname()
     logs1 = k.logs(shell=True)
 
@@ -141,7 +142,8 @@ def test_memory(k):
 
 def test_cmd_w_conda_env(k):
     env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
-    cmd = "$PYTHON_BIN -c 'import sys; print(sys.version_info); import random; print(str(random.random()))'"
+    cmd = "$PYTHON_BIN -c 'import sys; print(sys.version_info);" \
+          " import random; print(str(random.random()))'"
     k.start(cmd, env=env_zip)
 
     if not k.wait_for_completion(30):
@@ -149,7 +151,7 @@ def test_cmd_w_conda_env(k):
 
     time.sleep(5)  # log aggregation
     logs = k.logs(shell=True)
-    assert "(2, 6, 9, 'final', 0)" in str(logs)
+    assert "'final'" in str(logs)  # part of version string
 
 
 cur_dir = os.path.dirname(__file__)
@@ -177,6 +179,7 @@ def test_kill_status(k):
 
     assert k.kill()
 
+    time.sleep(1)
     status = k.runtime_status()
     assert status == 'KILLED'
 
@@ -189,6 +192,7 @@ def test_yarn_kill_status(k):
 
     assert k.yarn_api.kill(app_id)
 
+    time.sleep(1)
     status = k.runtime_status()
     assert status == 'KILLED'
 
@@ -203,6 +207,9 @@ def test_logs(k):
 
     if not k.wait_for_completion(30):
         k.kill()
+
+    time.sleep(5)
+    assert k.logs()
 
 
 # temporarily removing test until vCore handling is better resolved in the core

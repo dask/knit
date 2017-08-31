@@ -1,4 +1,7 @@
-ANACONDADIR=${1:-"/opt/anaconda"}
+#!/usr/bin/env bash
 
-$ANACONDADIR/bin/pip install pytest-cov
-$ANACONDADIR/bin/py.test --cov=knit knit/tests --cov-report term-missing -s -vv
+source activate test
+conda install -y py4j lxml requests pytest-cov python-coveralls coveralls -c conda-forge
+cd /knit
+python setup.py install mvn
+py.test --cov=knit knit/tests --cov-report term-missing -s -vv

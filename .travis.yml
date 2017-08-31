@@ -14,34 +14,21 @@ services:
   - docker
 
 before_install:
-  - sudo rm /usr/local/bin/docker-compose
-  - curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > docker-compose
-  - chmod +x docker-compose
-  - sudo mv docker-compose /usr/local/bin
-  - pwd
-  - echo $TRAVIS_PYTHON_VERSION
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      export DOCKER_ENV=/opt/anaconda;
-    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.6" ]]; then
-        export DOCKER_ENV=/opt/anaconda/envs/py36;
-    else
-        export DOCKER_ENV=/opt/anaconda/envs/py35;
-    fi
-  - pushd continuous_integration
-  - docker-compose up -d
-  - export CONTAINER_ID="knit_container"
+  - docker run --name knit_test -d -v $PWD:/knit mdurant/hadoop
+  - export CONTAINER_ID=`docker ps | grep knit_test | awk '{print $1}'`
   - sleep 20
 
 install:
   - pwd
   - echo $DOCKER_ENV
-  - docker exec -it $CONTAINER_ID $DOCKER_ENV/bin/python setup.py install mvn
+  - docker exec -it $CONTAINER_ID conda create -y -n test python=$TRAVIS_PYTHON_VERSION pytest dask distributed
 
 script:
   - pwd
   - echo $DOCKER_ENV
-  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh $DOCKER_ENV
+  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
 
 after_success:
   - docker exec -it $CONTAINER_ID bash -c "export TRAVIS=$TRAVIS && export TRAVIS_JOB_ID=$TRAVIS_JOB_ID && TRAVIS_BRANCH=$TRAVIS_BRANCH && /knit/continuous_integration/coverage_upload.sh"
+  - docker exec -it $CONTAINER_ID kill 1
 
