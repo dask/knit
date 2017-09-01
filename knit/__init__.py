@@ -3,6 +3,8 @@ import warnings
 
 from .utils import *
 from .core import *
+from .env import CondaCreator
+from .yarn_api import YARNAPI
 try:
     from .dask_yarn import DaskYARNCluster
 except ImportError:    # pragma: no cover

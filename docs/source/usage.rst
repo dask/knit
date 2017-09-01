@@ -8,7 +8,8 @@ interest develop.  Below are a few novels ways we can currently use ``Knit``
 Python
 ~~~~~~
 
-The example below use Python found in the ``$PATH``.  This is usually the system Python.
+The example below use any Python found in the ``$PATH``.  This is usually the system Python (i.e.,
+on a cluster where it has already been installed for you).
 
 .. code-block:: python
 
@@ -38,7 +39,7 @@ zipped directory with the following structure typical of Python environments::
    >>> appId = k.start(cmd, env='<full-path>/dev.zip')
 
 When we ship ``<full-path>/dev.zip``, knit uploads ``dev.zip`` to a temporary directory within the
-user's home HDFS space e.g. ``/Users/ubuntu/.knitDeps`` and the following bash ENVIRONMENT variables
+user's home HDFS space e.g. ``/users/ubuntu/.knitDeps`` and the following bash ENVIRONMENT variables
 will be available:
 
 - ``$CONDA_PREFIX``: full path to prefix location of zipped directory
@@ -48,7 +49,7 @@ With the ENVIRONMENT variables available users can build more nuanced commands l
 
 .. code-block:: python
 
-   >>> cmd = '$PYTHON_BIN $CONDA_PREFIX/bin/dworker 8786'
+   >>> cmd = '$PYTHON_BIN $CONDA_PREFIX/bin/dask-worker 8786'
 
 ``knit`` also provides a convenience method with ``conda`` to help build zipped environments.  The following
 builds an environment ``env.zip`` with Python 3.5 and a variety of popular data Python libraries:
@@ -69,37 +70,7 @@ Adding Files
 With the above, we are send files ``creds.txt`` and ``data.csv`` to each container and can reference
 them as local file paths in the ``cmd`` command.
 
-JVM CLI
-~~~~~~~
+Dask Clusters
+~~~~~~~~~~~~~
 
-We can also call out to the HADOOP jar directly::
-
-   $ hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client --help
-      knit x.1
-      Usage: scopt [options]
-
-        -n <value> | --numContainers <value>
-              Number of YARN containers
-        -m <value> | --memory <value>
-              Amount of memory per container
-        -c <value> | --virtualCores <value>
-              Virtual cores per container
-        -C <value> | --command <value>
-              Command to run in containers
-        -p <value> | --pythonEnv <value>
-              Number of YARN containers
-        --help
-              command line for launching distributed python
-
-   $ hadoop jar ./knit-1.0-SNAPSHOT.jar io.continuum.knit.Client --numContainers 1 \
-     --command "python -c 'import sys; print(sys.path); import random; print(str(random.random()))'"
-
-
-Helpful aliases
----------------
-
-.. code-block:: bash
-
-   $ alias yarn-status='yarn application -status'
-   $ alias yarn-log='yarn logs -applicationId'
-   $ alias yarn-kill='yarn application -kill'
+The previous methods can be combined to launch a full distributed
