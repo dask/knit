@@ -29,11 +29,11 @@ if 'mvn' in sys.argv:
     shutil.copy(jar_file, java_lib_dir)
 
 setup(name='knit',
-      version="0.2.1",
+      version="0.2.2",
       description='Python wrapper for YARN Applications',
       url='http://github.com/dask/knit/',
       maintainer='Benjamin Zaitlen',
-      maintainer_email='bzaitlen@continuum.io',
+      maintainer_email='bzaitlen@anaconda.com',
       license='BSD',
       keywords='yarn',
       packages=['knit'],

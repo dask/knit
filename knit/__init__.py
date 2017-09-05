@@ -11,4 +11,4 @@ except ImportError:    # pragma: no cover
     warnings.warn('dask/distributed not installed, '
                   'DaskYARNCluster not available')
 
-__version__ = "0.2.1"
+__version__ = "0.2.2"
