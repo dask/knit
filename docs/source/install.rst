@@ -1,12 +1,16 @@
 Installation
 ============
 
+The runtime requirements of ``knit`` are python, lxml, requests, py4j. Python versions
+2.7, 3.5 and 3.6 are currently supported. Dask is required
+to launch a Dask cluster. These are all available via conda (py4j on the conda-forge channel).
+
 Easy
 ~~~~
 
 Use ``pip`` or ``conda`` to install::
 
-   $ conda install knit -c dask
+   $ conda install knit -c conda-forge
    or
    $ pip install knit --upgrade
 
@@ -15,7 +19,6 @@ Source
 ~~~~~~
 
 The following steps can be used to install and run ``knit`` from source.
-These instructions were tested on Ubuntu 14.04, CDH 5.5.1, and Hadoop 2.6.0.
 
 Update and install system dependencies:
 
@@ -23,6 +26,12 @@ Update and install system dependencies:
 
    $ sudo apt-get update
    $ sudo apt-get install git maven openjdk-7-jdk -y
+
+or install these via conda
+
+.. code-block:: bash
+
+   $ conda install -y -c conda-forge setuptools maven openjdk
 
 Clone git repository and build maven project:
 

@@ -7,9 +7,6 @@ python:
 
 sudo: true
 
-env:
-  DOCKER_COMPOSE_VERSION: 1.5.2
-
 services:
   - docker
 
@@ -19,13 +16,9 @@ before_install:
   - sleep 20
 
 install:
-  - pwd
-  - echo $DOCKER_ENV
   - docker exec -it $CONTAINER_ID conda create -y -n test python=$TRAVIS_PYTHON_VERSION pytest dask distributed
 
 script:
-  - pwd
-  - echo $DOCKER_ENV
   - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
 
 after_success:

@@ -171,6 +171,9 @@ class Knit(object):
         callback_socket.listen(1)
         callback_host, callback_port = callback_socket.getsockname()
 
+        if not os.path.exists(self.JAR_FILE_PATH):
+            raise KnitException('JAR file %s does not exists - please build'
+                                ' with maven' % self.JAR_FILE_PATH)
         args = ["hadoop", "jar", self.JAR_FILE_PATH, self.JAVA_APP,
                 "--callbackHost", str(callback_host), "--callbackPort",
                 str(callback_port)]
@@ -314,7 +317,8 @@ class Knit(object):
         self.master.removeContainer(str(container_id))
 
     @staticmethod
-    def create_env(env_name, packages=None, conda_root=None, remove=False):
+    def create_env(env_name, packages=None, conda_root=None, remove=False,
+                   channels=None):
         """
         Create zipped directory of a conda environment
 
@@ -325,6 +329,8 @@ class Knit(object):
         conda_root : str, optional
         remove : bool
             remove possible conda environment before creating
+        channels : list of str
+            conda channels to use (defaults to your conda setup)
 
         Returns
         -------
@@ -339,7 +345,8 @@ class Knit(object):
         ...                         packages=['distributed', 'dask', 'pandas'])
         """
 
-        c = CondaCreator(conda_root=conda_root)
+        channels = channels or []
+        c = CondaCreator(conda_root=conda_root, channels=channels)
         return c.create_env(env_name, packages=packages, remove=remove)
 
     def logs(self, shell=False):

@@ -7,7 +7,7 @@ Install
 Use ``pip`` or ``conda`` to install::
 
    $ pip install knit --upgrade
-   $ conda install knit -c dask
+   $ conda install knit -c conda-forge
 
 Commands
 --------
@@ -38,7 +38,7 @@ monitoring data.
 
 .. code-block:: python
 
-   >>> k.status(app_id)
+   >>> k.status()
    {'app': {'allocatedMB': 512,
   'allocatedVCores': 1,
   'amContainerLogs': 'http://192.168.1.3:8042/node/containerlogs/container_1454100653858_0011_01_000001/ubuntu',
@@ -74,27 +74,27 @@ Logs
 
 We retrieve log data directly from a ``RUNNING`` Application Master::
 
-   >>> k.logs(app_id)
+   >>> k.logs()
 
 Or, if log aggregation is enabled, we retrieve the resulting aggregated log data stored in HDFS.  Note:
-aggregated log data is only available **after** the application has finished or been terminated
-using the ``shell=True`` keyword argument::
-
-   >>> k.logs(app_id, shell=True)
+aggregated log data is only available **after** the application has finished or been terminated,
+usually with a small lag of a few seconds while log aggregation takes place.
 
 
 Kill
 ~~~~
 
-To stop an application from executing immediately, use the ``kill`` method:
+To stop an application from executing immediately, use the ``kill`` method::
 
-::
-
-   >>> k.kill(app_id)
+   >>> k.kill()
 
 
 Python Applications
 -------------------
+
+Python applications can be created by first making a conda environment for them to run within.
+This can be done directly with ``CondaCreator`` (and such environments are cached and reused)
+or with the ``knit`` instance itself.
 
 A simple Python based application:
 
@@ -103,10 +103,11 @@ A simple Python based application:
    from knit import Knit
    k = Knit()
 
+   env = k.create_env('test', packages=['python=3.5']])
    cmd = 'python -c "import sys; print(sys.version_info); import random; print(str(random.random()))"'
-   app_id = k.start(cmd, num_containers=2)
+   app_id = k.start(cmd, num_containers=2, env=env)
 
-A long running Python application:
+A long running Python application. Here we reuse the same environment create above:
 
 .. code-block:: python
 
@@ -114,6 +115,6 @@ A long running Python application:
    k = Knit()
 
    cmd = 'python -m SimpleHTTPServer'
-   app_id = k.start(cmd, num_containers=2)
+   app_id = k.start(cmd, num_containers=2, env=env)
 
 .. _ResourceManager: https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html

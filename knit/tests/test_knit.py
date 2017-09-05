@@ -40,8 +40,15 @@ def wait_for_containers(k, running_containers, timeout=30):
 
 @pytest.yield_fixture
 def k():
-    knitter = Knit(nn_port=8020, rm_port=8088)
-    yield knitter
+    knitter = Knit(nn='localhost', rm='localhost', nn_port=8020, rm_port=8088)
+    try:
+        yield knitter
+    finally:
+        # always kill, to avoid follow-on resource pressure
+        try:
+            knitter.kill()
+        except:
+            pass
 
 
 def test_argument_parsing(k):

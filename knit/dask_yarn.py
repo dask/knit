@@ -108,7 +108,7 @@ class DaskYARNCluster(object):
                 self.env = env_path + '.zip'
             else:
                 # create env from scratch
-                self.env = self.knit.create_env(env_name=env_name,
+                self.env = c.create_env(env_name=env_name,
                                                 packages=self.packages)
         elif not self.env.endswith('.zip'):
             # given env directory, so zip it
