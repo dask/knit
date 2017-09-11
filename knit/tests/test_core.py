@@ -99,7 +99,7 @@ def test_multiple_containers(k):
 
 
 def test_add_remove_containers(k):
-    cmd = "sleep 60"
+    cmd = "sleep 600"
     k.start(cmd, num_containers=1, memory=128)
 
     wait_for_status(k, 'RUNNING')
