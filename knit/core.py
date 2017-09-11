@@ -7,7 +7,7 @@ import atexit
 import select
 import signal
 import platform
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, call
 import struct
 import time
 
@@ -20,6 +20,7 @@ from py4j.protocol import Py4JError
 from py4j.java_gateway import JavaGateway, GatewayClient
 
 logger = logging.getLogger(__name__)
+on_windows = platform.system() == "Windows"
 
 
 def read_int(stream):
@@ -99,12 +100,13 @@ class Knit(object):
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
-        os.environ['REPLICATION_FACTOR'] = str(conf['replication_factor'])
+        os.environ['REPLICATION_FACTOR'] = str(self.conf['replication_factor'])
         os.environ['HDFS_KNIT_DIR'] = self.hdfs_home
 
         self.client = None
         self.master = None
         self.app_id = None
+        self.proc = None
         self._hdfs = None
 
     def __str__(self):
@@ -177,8 +179,6 @@ class Knit(object):
         args = ["hadoop", "jar", self.JAR_FILE_PATH, self.JAVA_APP,
                 "--callbackHost", str(callback_host), "--callbackPort",
                 str(callback_port)]
-        
-        on_windows = platform.system() == "Windows"
 
         # Launch the Java gateway.
         # We open a pipe to stdin so that the Java gateway can die when the pipe is broken
@@ -190,7 +190,7 @@ class Knit(object):
         else:
             # preexec_fn not supported on Windows
             proc = Popen(args, stdin=PIPE)
-
+        self.proc = proc
         gateway_port = None
         # We use select() here in order to avoid blocking indefinitely if the
         # subprocess dies before connecting
@@ -210,24 +210,9 @@ class Knit(object):
             raise Exception("Java gateway process exited before sending the"
                             " driver its port number")
 
-        # In Windows, ensure the Java child processes do not linger after Python has exited.
-        # In UNIX-based systems, the child process can kill itself on broken pipe (i.e. when
-        # the parent process' stdin sends an EOF). In Windows, however, this is not possible
-        # because java.lang.Process reads directly from the parent process' stdin, contending
-        # with any opportunity to read an EOF from the parent. Note that this is only best
-        # effort and will not take effect if the python process is violently terminated.
-        if on_windows:
-            # In Windows, the child process here is "spark-submit.cmd", not the JVM itself
-            # (because the UNIX "exec" command is not available). This means we cannot simply
-            # call proc.kill(), which kills only the "spark-submit.cmd" process but not the
-            # JVMs. Instead, we use "taskkill" with the tree-kill option "/t" to terminate all
-            # child processes in the tree (http://technet.microsoft.com/en-us/library/bb491009.aspx)
-            def killChild():
-                Popen(["cmd", "/c", "taskkill", "/f", "/t", "/pid", str(proc.pid)])
-            atexit.register(killChild)
-
         gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
         self.client = gateway.entry_point
+        self.client_gateway = gateway
         upload = self.check_env_needs_upload(env)
         self.app_id = self.client.start(env, ','.join(files), app_name, queue,
                                         str(upload))
@@ -317,8 +302,8 @@ class Knit(object):
         self.master.removeContainer(str(container_id))
 
     @staticmethod
-    def create_env(env_name, packages=None, conda_root=None, remove=False,
-                   channels=None):
+    def create_env(env_name, packages=None, remove=False,
+                   channels=None, conda_pars=None):
         """
         Create zipped directory of a conda environment
 
@@ -326,11 +311,15 @@ class Knit(object):
         ----------
         env_name : str
         packages : list
-        conda_root : str, optional
+        conda_root: str
+            Location of conda installation. If None, will download miniconda and
+            produce an isolated environment.
         remove : bool
             remove possible conda environment before creating
         channels : list of str
             conda channels to use (defaults to your conda setup)
+        conda_pars: dict
+            Further pars to pass to CondaCreator
 
         Returns
         -------
@@ -346,7 +335,7 @@ class Knit(object):
         """
 
         channels = channels or []
-        c = CondaCreator(conda_root=conda_root, channels=channels)
+        c = CondaCreator(channels=channels, **(conda_pars or {}))
         return c.create_env(env_name, packages=packages, remove=remove)
 
     def logs(self, shell=False):
@@ -384,10 +373,12 @@ class Knit(object):
             True if successful, False otherwise
         """
         cur_status = self.runtime_status()
-        while cur_status != 'SUCCEEDED' and timeout > 0:
+        while cur_status not in ['FAILED', 'KILLED', 'FINISHED']:
             time.sleep(0.2)
             timeout -= 0.2
             cur_status = self.runtime_status()
+            if timeout < 0:
+                break
 
         return timeout > 0
 
@@ -409,7 +400,14 @@ class Knit(object):
             logger.debug("Error while attempting to kill", exc_info=1)
             # fallback
             self.yarn_api.kill(self.app_id)
-        out = self.status()['app']['finalStatus'] == 'KILLED'
+        if self.proc is not None:
+            self.client_gateway.shutdown()
+            if on_windows:
+                subprocess.call(["cmd", "/c", "taskkill", "/f", "/t", "/pid", str(self.proc.pid)])
+            self.proc.terminate()
+            self.proc.communicate()
+            self.proc = None
+        out = self.runtime_status() == 'KILLED'
         return out
 
     def __del__(self):
@@ -427,7 +425,7 @@ class Knit(object):
         log: dictionary
             status of application
         """
-        return self.yarn_api.status(self.app_id)
+        return self.yarn_api.apps_info(self.app_id)
     
     def runtime_status(self):
         """ Get runtime status of an application
@@ -437,23 +435,10 @@ class Knit(object):
         str:
             status of application
         """
-        if self.client is None:
-            return "NONE"
         try:
-            status = self.client.status()
-            # rename finished to succeeded
-            if status == "FINISHED":
-                return "SUCCEEDED"
-            return status
-        except Py4JError:
-            logger.debug("Error while fetching status", exc_info=1)
-
-        # fallback
-        status = self.status(self.app_id)
-        final_status = status['app']['finalStatus']
-        if final_status == 'UNDEFINED':
-            return status['app']['state']
-        return final_status
+            return self.yarn_api.state(self.app_id)
+        except:
+            return "NONE"
 
     @property
     def hdfs(self):
@@ -469,10 +454,12 @@ class Knit(object):
                 par2 = self.conf.copy()
                 par2['host'] = par2.pop('nn')
                 par2['port'] = par2.pop('nn_port')
+                del par2['replication_factor']
                 del par2['rm_port']
+                del par2['rm_port_https']
                 self._hdfs = hdfs3.HDFileSystem(pars=par2)
             except:
-                return
+                self._hdfs = False
         return self._hdfs
 
     def list_envs(self):

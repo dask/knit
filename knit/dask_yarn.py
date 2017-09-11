@@ -38,16 +38,15 @@ class DaskYARNCluster(object):
         If building an environment, pass these extra channels to conda using
         ``-c`` (i.e., in addition but of superior priority to any system
         default channels).
-    conda_root: str
-        Location of conda. If None, will download miniconda and produce an
-        isolated environment.
+    conda_pars: dict
+        Things to pass to CondaCreator
     ip: IP-like string or None
         Address for the scheduler to listen on. If not given, uses the system
         IP.
     """
 
     def __init__(self, autodetect=True, packages=None, ip=None, env=None,
-                 channels=None, conda_root=None, **kwargs):
+                 channels=None, conda_pars=None, **kwargs):
 
         ip = ip or socket.gethostbyname(socket.gethostname())
 
@@ -55,7 +54,7 @@ class DaskYARNCluster(object):
         self.application_master_container = None
         self.app_id = None
         self.channels = channels
-        self.conda_root = conda_root
+        self.conda_pars = conda_pars
 
         try:
             self.local_cluster = LocalCluster(n_workers=0, ip=ip)
@@ -93,8 +92,7 @@ class DaskYARNCluster(object):
         -------
         YARN application ID.
         """
-        c = CondaCreator(channels=self.channels or [],
-                         conda_root=self.conda_root)
+        c = CondaCreator(channels=self.channels, **(self.conda_pars or {}))
         if self.env is None:
             env_name = 'dask-' + sha1(
                 '-'.join(self.packages).encode()).hexdigest()
@@ -109,7 +107,7 @@ class DaskYARNCluster(object):
             else:
                 # create env from scratch
                 self.env = c.create_env(env_name=env_name,
-                                                packages=self.packages)
+                                        packages=self.packages)
         elif not self.env.endswith('.zip'):
             # given env directory, so zip it
             c.zip_env(self.env)

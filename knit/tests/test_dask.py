@@ -1,7 +1,10 @@
+from __future__ import print_function
+
 import os
 import sys
 import errno
 import pytest
+import shutil
 import signal
 import subprocess
 import time
@@ -10,6 +13,7 @@ from functools import wraps
 pytest.importorskip('dask')
 import dask.distributed
 from knit.dask_yarn import DaskYARNCluster
+from knit import CondaCreator, Knit
 from knit.conf import conf, guess_config
 from dask.distributed import Client
 from distributed.utils_test import loop
@@ -36,41 +40,60 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
 
 def test_knit_config():
     cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
-                              autodetect=False)
+                              autodetect=False, replication_factor=1)
     str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
     cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
-                              autodetect=True)
+                              autodetect=True, replication_factor=1)
     str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
 
     try:
         conf['nn'] = 'nothost'
-        d = DaskYARNCluster(autodetect=True)
+        d = DaskYARNCluster(autodetect=True, replication_factor=1)
         assert d.knit.conf['nn'] == 'nothost'
 
-        d = DaskYARNCluster(autodetect=True, nn='oi')
+        d = DaskYARNCluster(autodetect=True, nn='oi', replication_factor=1)
         assert d.knit.conf['nn'] == 'oi'
 
     finally:
         guess_config()
 
+python_version = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
+python_pkg = 'python=%s' % python_version
+pkgs = [python_pkg, 'nomkl']
 
-def test_yarn_cluster(loop):
-    python_version = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    python_pkg = 'python=%s' % (python_version)
-    with DaskYARNCluster(packages=[python_pkg]) as cluster:
+
+@pytest.yield_fixture
+def clear():
+    c = CondaCreator()
+    try:
+        yield
+    finally:
+        shutil.rmtree(c.conda_envs)
+        try:
+            k = Knit()
+            import hdfs3
+            hdfs = hdfs3.HDFileSystem()
+            hdfs.rm(k.knit_home, recursive=True)
+        except ImportError:
+            pass
+
+
+def test_yarn_cluster(loop, clear):
+    with DaskYARNCluster(packages=pkgs, replication_factor=1) as cluster:
 
         @timeout(600)
         def start_dask():
-            cluster.start(2, cpus=1, memory=256)
-        try:
+            cluster.start(2, cpus=1, memory=128)
+        try:    
             start_dask()
         except Exception as e:
             cluster.knit.kill()
             print("Fetching logs from failed test...")
+            print(subprocess.check_output(['free', '-m']).decode())
+            print(subprocess.check_output(['df', '-h']).decode())
+            print(cluster.knit.yarn_api.cluster_metrics())
             time.sleep(5)
             print(cluster.knit.logs())
-            print(subprocess.check_output(['free', '-m']))
-            print(subprocess.check_output(['df', '-h']))
 
             sys.exit(1)
 
@@ -92,22 +115,18 @@ def test_yarn_cluster(loop):
             print("Fetching logs from failed test...")
             time.sleep(5)
             print(subprocess.check_output(['free', '-m']))
-            print(cluster.knit.logs())
             print(subprocess.check_output(['df', '-h']))
-            sys.exit(1)
+            print(cluster.knit.logs())
 
 
 def test_yarn_cluster_add_stop(loop):
-    python_version = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    python_pkg = 'python=%s' % python_version
+    with DaskYARNCluster(packages=pkgs, replication_factor=1) as _cluster:
+        _cluster.start(1, cpus=1, memory=128)
 
-    with DaskYARNCluster(packages=[python_pkg]) as _cluster:
-        _cluster.start(1, cpus=1, memory=500)
+        assert len(_cluster.workers) == 0
 
-    assert len(_cluster.workers) == 0
-
-    cluster = DaskYARNCluster(env=_cluster.env)
-    cluster.start(1, cpus=1, memory=256)
+    cluster = DaskYARNCluster(env=_cluster.env, replication_factor=1)
+    cluster.start(1, cpus=1, memory=128)
 
     client = Client(cluster)
     future = client.submit(lambda x: x + 1, 10)
@@ -118,14 +137,14 @@ def test_yarn_cluster_add_stop(loop):
     assert len(workers) == 1
 
     status = cluster.knit.status()
-    num_containers = status['app']['runningContainers']
+    num_containers = status['runningContainers']
     assert num_containers == 2  # 1 container for the worker and 1 for the RM
 
-    cluster.add_workers(n_workers=1, cpus=1, memory=256)
+    cluster.add_workers(n_workers=1, cpus=1, memory=128)
 
     while num_containers != 3:
         status = cluster.knit.status()
-        num_containers = status['app']['runningContainers']
+        num_containers = status['runningContainers']
 
     # wait a tad to let workers connect to scheduler
 
@@ -144,7 +163,7 @@ def test_yarn_cluster_add_stop(loop):
     cluster.remove_worker(cluster.workers[1])
     while num_containers != 2:
         status = cluster.knit.status()
-        num_containers = status['app']['runningContainers']
+        num_containers = status['runningContainers']
 
     assert len(cluster.workers) == 1
 

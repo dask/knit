@@ -79,7 +79,7 @@ object Client extends Logging {
   }
   
   def start(pythonEnv: String, files: String, appName: String, queue: String, upload: String) : String = {
-    logger.info("Staring Application Master")
+    logger.info("Starting Application Master")
 
     implicit val conf = new YarnConfiguration()
     val fs = FileSystem.get(conf)
@@ -233,6 +233,11 @@ object Client extends Logging {
   def kill() : Boolean = {
     client.killApplication(appId)
     true
+  }
+
+  def exit() {
+    logger.info("Client exit")
+    System.exit(0)
   }
   
 }

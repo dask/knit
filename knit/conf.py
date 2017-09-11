@@ -75,9 +75,9 @@ def hdfs_conf(confd, more_files=None):
         c['nn'] = c["dfs.nameservices"].split(',', 1)[0]
         c['nn_port'] = None
     if 'nn' not in c:
-        # no host found at all, config cannot work, so warn
-        warnings.warn('No host found in HDFS config')
-        c['nn'] = ''
+        # no host found at all, use defaults
+        c['nn'] = conf_defaults['nn']
+        c['nn_port'] = conf_defaults['nn_port']
     if 'dfs.replication' in c:
         c['replication_factor'] = c['dfs.replication']
     else:

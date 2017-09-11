@@ -1,9 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
-import requests
 import logging
 import re
+import requests
 from subprocess import STDOUT
+try:
+    from subprocess import SubprocessError
+except ImportError:
+    # py2
+    from subprocess import CalledProcessError as SubprocessError
+import time
 
 from .utils import shell_out, get_log_content
 from .exceptions import YARNException
@@ -16,18 +22,35 @@ class YARNAPI(object):
         self.rm_port = rm_port
         self.scheme = scheme
         self.host_port = "{0}:{1}".format(self.rm, self.rm_port)
+        self.url = scheme + '://' + self.host_port + '/ws/v1/'
 
     @property
     def apps(self):
-        url = "{}://{}/ws/v1/cluster/apps/".format(self.scheme, self.host_port)
-        logger.debug("Getting Resource Manager Info: {0}".format(url))
-        r = requests.get(url)
-        data = r.json()
-        logger.debug(data)
-        if not data['apps']:
-            return []
-        apps = [d['id'] for d in data['apps']['app']]
+        """App IDs known to YARN"""
+        data = self.apps_info()
+        apps = [d['id'] for d in data]
         return apps
+
+    def apps_info(self, app_id=None):
+        """List app apps, or info for given app"""
+        if app_id is None:
+            # this query allows for filtering on a number of parameters
+            url = self.url + 'cluster/apps/'
+            logger.debug("Getting Resource Manager Info: {0}".format(url))
+            r = requests.get(url)
+            self._verify_response(r)
+            data = r.json()
+            return (data.get('apps', None) or {'app': []})['app']
+        else:
+            r = requests.get(self.url + 'cluster/apps/{}'.format(app_id))
+            self._verify_response(r)
+            return r.json()['app']
+
+    def app_attempts(self, app_id):
+        """List of attempt details for given app"""
+        r = requests.get(self.url + 'cluster/apps/{}/appattempts'.format(app_id))
+        self._verify_response(r)
+        return r.json()['appAttempts']['appAttempt']
 
     def app_containers(self, app_id=None, info=None):
         """
@@ -51,15 +74,16 @@ class YARNAPI(object):
         if app_id:
             info = self.status(app_id)
 
-        amHostHttpAddress = info['app']['amHostHttpAddress']
+        amHostHttpAddress = info['amHostHttpAddress']
 
         url = "http://{0}/ws/v1/node/containers".format(
             amHostHttpAddress)
         r = requests.get(url)
+        self._verify_response(r)
 
         data = r.json()['containers']
         if not data:
-            raise YARNException("No container logs available")
+            raise YARNException("No containers available")
 
         container = data['container']
         logger.debug(container)
@@ -73,7 +97,7 @@ class YARNAPI(object):
                       if get_app_id_num(d['id']) == app_id_num]
         return containers
 
-    def logs(self, app_id, shell=False):
+    def logs(self, app_id, shell=False, retries=4, delay=3):
         """
         Collect logs from RM (if running)
         With shell=True, collect logs from HDFS after job completion
@@ -90,7 +114,7 @@ class YARNAPI(object):
         log: dictionary
             logs from each container (when possible)
         """
-        running = self.status(app_id)['app']['state'] == 'RUNNING'
+        running = self.state(app_id) == 'RUNNING'
         if not shell and running:
             # logs are held in memory only while app is running
             try:
@@ -119,9 +143,17 @@ class YARNAPI(object):
                                " using fallback", exc_info=1)
 
         # fallback
-        # TODO: this is just a location in HDFS
+        # TODO: this is just a location in HDFS given by app info
         cmd = ["yarn", "logs", "-applicationId", app_id]
-        out = shell_out(cmd)
+        while True:
+            try:
+                out = shell_out(cmd)
+                break
+            except SubprocessError:
+                retries -= 1
+                if retries < 0:
+                    raise RuntimeError('Retries exceeded when fetching logs for ' + app_id)
+                time.sleep(delay)
         logs = {}
         container = None
         ltype = 'stdout'
@@ -149,6 +181,12 @@ class YARNAPI(object):
         cmd = ["yarn", "container", "-status", container_id]
         return str(shell_out(cmd))
 
+    def state(self, app_id):
+        """Current state of given application"""
+        r = requests.get(self.url + 'cluster/apps/{}/state'.format(app_id))
+        self._verify_response(r)
+        return r.json()['state']
+    
     def status(self, app_id):
         """ Get status of an application
 
@@ -161,15 +199,7 @@ class YARNAPI(object):
         -------
         dictionary: status of application
         """
-        url = "{0}://{1}/ws/v1/cluster/apps/{2}".format(self.scheme,
-                                                        self.host_port, app_id)
-        logger.debug("Getting Application Info: {0}".format(url))
-        r = requests.get(url)
-        data = r.json()
-        logger.debug(data)
-        if 'RemoteException' in data:
-            raise YARNException(data['RemoteException']['message'])
-        return data
+        return self.apps_info(app_id)
 
     def kill_all(self, knit_only=True):
         """Kill a set of applications
@@ -180,10 +210,10 @@ class YARNAPI(object):
             Only kill apps with the name 'knit' (i.e., ones we started)
         """
         for app in self.apps:
-            stat = self.status(app)['app']
+            stat = self.apps_info(app)
             if knit_only and stat['name'] != 'knit':
                 continue
-            if stat['state'] not in ['KILLED', 'FINISHED']:
+            if stat['state'] in ['KILLED', 'FINISHED', 'FAILED']:
                 continue
             self.kill(app)
 
@@ -208,3 +238,42 @@ class YARNAPI(object):
             return "Killed application" in out
         except:
             return False
+
+    def _verify_response(self, r):
+        if not r.ok:
+            try:
+                raise YARNException(r.json()['RemoteException']['message'])
+            except ValueError:
+                raise YARNException(r.text)
+
+    def cluster_info(self):
+        """YARN cluster information: driver, version..."""
+        r = requests.get(self.url + 'cluster')
+        self._verify_response(r)
+        return r.json()['clusterInfo']
+
+    def cluster_metrics(self):
+        """YARN cluster global capacity/allocations"""
+        r = requests.get(self.url + 'cluster/metrics')
+        self._verify_response(r)
+        return r.json()['clusterMetrics']
+
+    def scheduler(self):
+        """State of the scheduler/queue"""
+        r = requests.get(self.url + 'cluster/scheduler')
+        self._verify_response(r)
+        return r.json()['scheduler']
+
+    def app_stats(self):
+        """Number of apps of various states"""
+        r = requests.get(self.url + 'cluster/appstatistics')
+        self._verify_response(r)
+        return r.json()['appStatInfo']
+
+    def nodes(self):
+        """Info on YARN's worker nodes"""
+        r = requests.get(self.url + 'cluster/nodes')
+        self._verify_response(r)
+        return r.json()['nodes']['node']
+
+

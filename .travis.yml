@@ -2,7 +2,6 @@ language: python
 
 python:
   - 2.7
-  - 3.5
   - 3.6
 
 sudo: true
@@ -19,9 +18,8 @@ install:
   - docker exec -it $CONTAINER_ID conda create -y -n test python=$TRAVIS_PYTHON_VERSION pytest dask distributed
 
 script:
-  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/coverage_test.sh
+  - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/simple_test.sh
 
 after_success:
-  - docker exec -it $CONTAINER_ID bash -c "export TRAVIS=$TRAVIS && export TRAVIS_JOB_ID=$TRAVIS_JOB_ID && TRAVIS_BRANCH=$TRAVIS_BRANCH && /knit/continuous_integration/coverage_upload.sh"
-  - docker exec -it $CONTAINER_ID kill 1
-
+  # - docker exec -it $CONTAINER_ID bash -c "export TRAVIS=$TRAVIS && export TRAVIS_JOB_ID=$TRAVIS_JOB_ID && TRAVIS_BRANCH=$TRAVIS_BRANCH && /knit/continuous_integration/coverage_upload.sh"
+  - docker kill $CONTAINER_ID

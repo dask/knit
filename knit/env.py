@@ -1,12 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
+import json
 import os
 import sys
 import shutil
 import requests
 import logging
+import tempfile
 import zipfile
 from subprocess import Popen, PIPE
+import warnings
 
 from .exceptions import CondaException
 from .utils import shell_out
@@ -20,88 +23,104 @@ miniconda_urls = {"linux": "https://repo.continuum.io/miniconda/"
                          "Miniconda3-latest-Windows-x86_64.exe"}
 
 logger = logging.getLogger(__name__)
+here = os.path.dirname(__file__)
+
+
+def miniconda_url():
+    """What to download for this platform"""
+    if sys.platform.startswith('linux'):
+        url = miniconda_urls['linux']
+    elif sys.platform.startswith('darwin'):
+        url = miniconda_urls['darwin']
+    else:
+        url = miniconda_urls['win']
+    if not sys.maxsize > 2 ** 32:
+        # 64bit check
+        url = url.replace("_64", "")
+    return url
 
 
 class CondaCreator(object):
     """
     Create Conda Env
+
+    The parameters below can generally be guessed from the system.
+    If `conda info` is required, it will only be run on the first
+    invocation, and the result cached.
+
+    Parameters
+    ----------
+    conda_root: str
+        Location of a conda installation. The conda executable is expected
+        at /bin/conda within.
+        If None, runs `conda info` to find out relevant information.
+        If no conda is found for `conda info`, or no conda executable exists
+        within the given location, will download and install miniconda
+        at that location. If the value is None, that location is within the
+        source tree.
+    conda_envs: str
+        directory in which to create environments; usually within the
+        source directory (so as not to pollute normal usage of conda)
+    miniconda_url: str
+        location to download miniconda from, if needed. Uses `miniconda_urls`
+        for the appropriate platform if not given.
+    channels: list of str
+        Channels to specify to conda. Note that defaults in .condarc will also
+        be included
+    conda_pkgs: str
+        Directory containing cached conda packages, normally within conda_root.
     """
+    conda_info = {}
 
-    def __init__(self, conda_root=None, channels=[]):
-        self.conda_dir = os.path.join(os.path.dirname(__file__), 'tmp_conda')
-
-        self.minifile_fp = os.path.join(self.conda_dir, mini_file)
-        self.conda_root = conda_root or os.path.join(self.conda_dir, 'miniconda')
-        self.python_bin = os.path.join(self.conda_root, 'bin', 'python')
-        self.conda_envs = os.path.join(self.conda_root, 'envs')
+    def __init__(self, conda_root=None, conda_envs=None, miniconda_url=None,
+                 channels=None, conda_pkgs=None):
+        if conda_root is None:
+            self._get_conda_info()
+            if self.conda_info:
+                self.conda_root = self.conda_info['conda_prefix']
+            else:
+                self.conda_root = os.path.join(here, 'tmp_conda')
         self.conda_bin = os.path.join(self.conda_root, 'bin', 'conda')
-        self.channels = channels
+        if not os.path.exists(self.conda_bin):
+            self._install_miniconda(self.conda_root, miniconda_url)
+        self.conda_envs = conda_envs or os.sep.join([here, 'tmp_conda', 'envs'])
+        self.conda_pkgs = conda_pkgs
+        self.channels = channels or []
 
-    @property
-    def miniconda_url(self):
-
-        if sys.platform.startswith('linux'):
-            url = miniconda_urls['linux']
-        elif sys.platform.startswith('darwin'):
-            url = miniconda_urls['darwin']
-        else:
-            url = miniconda_urls['win']
-
-        # 64bit check
-        if not sys.maxsize > 2**32:
-            url = url.replace("_64", "")
-
-        return url
-
-    @property
-    def miniconda_check(self):
-        return os.path.exists(self.conda_root)
-
-    def _download_miniconda(self):
-        if not os.path.exists(self.conda_dir):
-            os.mkdir(self.conda_dir)
-
-        mini_file = self.minifile_fp
-        if os.path.exists(mini_file):
-            return mini_file
-
+    def _install_miniconda(self, root, url):
+        url = url or miniconda_url()
+        tmp = tempfile.mkdtemp()
+        minifile = os.path.join(tmp, 'Miniconda3')
         logger.debug("Downloading latest Miniconda.sh")
-        r = requests.get(self.miniconda_url, stream=True)
-        with open(mini_file, 'wb') as f:
+        r = requests.get(url, stream=True)
+        with open(minifile, 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
             f.flush()
-
-        return os.path.abspath(mini_file)
-
-    def _install_miniconda(self):
-        """
-        Install miniconda.
-
-        Returns True if miniconda is successfully installed or was previously
-        created
-        """
-
-        if self.miniconda_check:
-            return self.conda_root
-
-        install_cmd = "bash {0} -b -p {1}".format(self.minifile_fp, self.conda_root).split()
-
-        self._download_miniconda()
-        logger.debug("Installing Miniconda in {0}".format(self.conda_root))
-
+        install_cmd = "bash {0} -b -p {1}".format(minifile, root).split()
+        logger.debug("Installing Miniconda in {0}".format(root))
         proc = Popen(install_cmd, stdout=PIPE, stderr=PIPE)
         out, err = proc.communicate()
-
         logger.debug(out)
         logger.debug(err)
+        self.conda_info['conda_prefix'] = root
 
-        return os.path.exists(self.python_bin)
+    def _get_conda_info(self):
+        """Ask a conda on PATH where it is installed"""
+        if self.conda_info:
+            # already did this before
+            return
+        try:
+            self.conda_info.update(json.loads(shell_out(
+                ['conda', 'info', '--json'])))
+        except (OSError, IOError):
+            warnings.warn('No conda found on PATH')
 
     def _create_env(self, env_name, packages=None, remove=False):
         """
-        Create Conda env environment
+        Create Conda env environment. If env_name is found in self.conda_envs,
+        if will be used without checking the existence of any given packages
 
         Parameters
         ----------
@@ -115,28 +134,13 @@ class CondaCreator(object):
         path : str
             path to newly created conda environment
         """
-
-        # ensure miniconda is installed
-        self._install_miniconda()
-        env_path = os.path.join(self.conda_root, 'envs', env_name)
+        env_path = os.path.join(self.conda_envs, env_name)
 
         if os.path.exists(env_path):
-            conda_list = shell_out(
-                [self.conda_bin, 'list', '-n', env_name]).split()
-
-            # filter out python/python=3
-            pkgs = [p for p in packages if 'python' not in p]
-
-            # try to be idempotent -- if packages exist don't recreate
-            if all(p in conda_list for p in pkgs):
-                return env_path
-
             if not remove:
-                raise CondaException("Conda environment: {0} already exists"
-                                     " but does not contain {1}".format(
-                                        env_name, packages))
-            else:
-                shutil.rmtree(env_path)
+                # assume env is OK, ignore packages.
+                return env_path
+            shutil.rmtree(env_path)
 
         if not isinstance(packages, list):
             raise TypeError("Packages must be a list of strings")
@@ -148,7 +152,10 @@ class CondaCreator(object):
         logger.info("Creating new env {0}".format(env_name))
         logger.info(' '.join(cmd))
 
-        proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
+        env = dict(os.environ)
+        if self.conda_pkgs:
+            env['CONDA_PKGS_DIRS'] = self.conda_pkgs
+        proc = Popen(cmd, stdout=PIPE, stderr=PIPE, env=env)
         out, err = proc.communicate()
 
         logger.debug(out)
@@ -157,7 +164,8 @@ class CondaCreator(object):
         env_python = os.path.join(env_path, 'bin', 'python')
 
         if not os.path.exists(env_python):
-            raise CondaException("Failed to create Python binary.")
+            raise CondaException("Failed to create Python binary at %s."
+                                 "" % env_python)
 
         return env_path
 
@@ -175,7 +183,7 @@ class CondaCreator(object):
             path to conda environment
         """
 
-        env_path = os.path.join(self.conda_root, 'envs', env_name)
+        env_path = os.path.join(self.conda_envs, env_name)
 
         if os.path.exists(env_path):
             return env_path
