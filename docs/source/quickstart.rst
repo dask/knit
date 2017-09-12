@@ -39,7 +39,7 @@ monitoring data.
 .. code-block:: python
 
    >>> k.status()
-   {'app': {'allocatedMB': 512,
+  {'allocatedMB': 512,
   'allocatedVCores': 1,
   'amContainerLogs': 'http://192.168.1.3:8042/node/containerlogs/container_1454100653858_0011_01_000001/ubuntu',
   'amHostHttpAddress': '192.168.1.3:8042',
@@ -64,7 +64,7 @@ monitoring data.
   'state': 'ACCEPTED',
   'trackingUI': 'UNASSIGNED',
   'user': 'ubuntu',
-  'vcoreSeconds': 123}}
+  'vcoreSeconds': 123}
 
 Often we track the ``state`` of an application.  Possible ``states`` include: ``NEW``,
 ``NEW_SAVING``, ``SUBMITTED``, ``ACCEPTED``, ``RUNNING``, ``FINISHED``, ``FAILED``, ``KILLED``
@@ -118,3 +118,16 @@ A long running Python application. Here we reuse the same environment create abo
    app_id = k.start(cmd, num_containers=2, env=env)
 
 .. _ResourceManager: https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html
+
+Dask Cluster
+------------
+
+Run a distributed dask cluster on YARN with a few lines like:
+
+To start a dask cluster on YARN
+
+.. code-block:: python
+
+   from knit import dask_yarn
+   cluster = dask_yarn.DaskYARNCluster()
+   cluster.start(nworkers=4, memory=1024, cpus=2)

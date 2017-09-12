@@ -63,9 +63,10 @@ Adding Files
 ~~~~~~~~~~~~
 ``Knit`` can also pass local files to each container.
 
- .. code-block:: python
- >>> files = ['creds.txt', 'data.csv']
- >>> k.start(cmd, files=files)
+.. code-block:: python
+
+   >>> files = ['creds.txt', 'data.csv']
+   >>> k.start(cmd, files=files)
 
 With the above, we are send files ``creds.txt`` and ``data.csv`` to each container and can reference
 them as local file paths in the ``cmd`` command.
@@ -73,4 +74,28 @@ them as local file paths in the ``cmd`` command.
 Dask Clusters
 ~~~~~~~~~~~~~
 
-The previous methods can be combined to launch a full distributed
+The previous methods can be combined to launch a full distributed dask cluster on YARN with code
+like the following
+
+.. code-block:: python
+
+   from knit import DaskYARNCluster
+   cluster = DaskYARNCluster(env='my/conda/env.zip')
+   cluster.start(8, cpu=2, memory=2048)
+
+The object ``cluster`` starts a dask scheduler, and can also be used to start or stop more
+containers than the original 8 referenced above. The same set of config options apply as for a
+``Knit`` object, in addition to conda creation options, which will define the environment in
+which the workers run.
+
+To start a dask client in the same session, you can simply do
+
+.. code-block:: python
+
+   from dask.distributed import Client
+   c = Client(cluster)
+
+and use as usual, or look at ``cluster.scheduler_address`` for clients connecting from other sessions.
+
+Note that DaskYARNCluster can also be used as a context manager, which will ensure that it gets
+closed (and the corresponding YARN application killed) when the ``with`` context finishes.
