@@ -140,7 +140,7 @@ class Knit(object):
         if met['activeNodes'] < 1:
             raise KnitException('No name-nodes active')
         # What if we simply don't have the full yarn-site.xml available?
-        mmin = self.conf.get('yarn.scheduler.minimum-allocation-mb', 1024)
+        mmin = int(self.conf.get('yarn.scheduler.minimum-allocation-mb', 1024))
         # 300MB default allocation for AM in client.scala
         mem = (max(300, mmin) + num_containers * max(memory, mmin))
         if met['availableMB'] < mem:
