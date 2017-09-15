@@ -138,7 +138,7 @@ def test_yarn_cluster_add_stop(loop):
 
     status = cluster.knit.status()
     num_containers = status['runningContainers']
-    assert num_containers == 2  # 1 container for the worker and 1 for the RM
+    assert num_containers == 2  # 1 container for the worker and 1 for the AM
 
     cluster.add_workers(n_workers=1, cpus=1, memory=128)
 
@@ -165,6 +165,7 @@ def test_yarn_cluster_add_stop(loop):
         status = cluster.knit.status()
         num_containers = status['runningContainers']
 
+    time.sleep(2)
     assert len(cluster.workers) == 1
 
     # STOP ALL WORKERS!
