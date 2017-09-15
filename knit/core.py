@@ -3,17 +3,18 @@ from __future__ import absolute_import, division, print_function
 import os
 import logging
 import socket
-import atexit
 import select
 import signal
 import platform
+import requests
+import socket
 from subprocess import Popen, PIPE, call
 import struct
 import time
 
 from .conf import conf, DEFAULT_KNIT_HOME
 from .env import CondaCreator
-from .exceptions import KnitException
+from .exceptions import KnitException, YARNException
 from .yarn_api import YARNAPI
 
 from py4j.protocol import Py4JError
@@ -69,6 +70,9 @@ class Knit(object):
     knit_home: str
         Location of knit's jar
 
+    Note: for now, only one Knit instance can live in a single process because
+    of how py4j interfaces with the JVM.
+
     Examples
     --------
 
@@ -110,9 +114,7 @@ class Knit(object):
         self._hdfs = None
 
     def __str__(self):
-        return "Knit<NN={0}:{1};RM={2}:{3}>".format(
-            self.conf['nn'], self.conf['nn_port'], self.conf['rm'],
-            self.conf['rm_port'])
+        return "Knit<RM={2}:{3}>".format(self.conf['rm'], self.conf['rm_port'])
 
     __repr__ = __str__
 
@@ -120,8 +122,54 @@ class Knit(object):
     def JAR_FILE_PATH(self):
         return os.path.join(self.KNIT_HOME, self.JAR_FILE)
 
+    def _pre_flight_checks(self, num_containers, virtual_cores, memory, env,
+                           files, queue):
+        """Some checks to see if app is possible to schedule
+
+        This depends on YARN's allocations reporting, which do not necessarily
+        reflect the true amount of resources on the cluster. Other failure
+        modes, such as full disc, are not likely to be caught here.
+        """
+        try:
+            # check response from RM
+            met = self.yarn_api.cluster_metrics()
+        except YARNException:
+            raise
+        except requests.ConnectionError:
+            raise KnitException('No response from RM ' + self.yarn_api.url)
+        if met['activeNodes'] < 1:
+            raise KnitException('No name-nodes active')
+        # What if we simply don't have the full yarn-site.xml available?
+        mmin = int(self.conf.get('yarn.scheduler.minimum-allocation-mb', 1024))
+        # 300MB default allocation for AM in client.scala
+        mem = (max(300, mmin) + num_containers * max(memory, mmin))
+        if met['availableMB'] < mem:
+            raise KnitException('Memory estimate for app (%iMB) exceeds cluster'
+                                ' capacity (%iMB)' % (mem, met['availableMB']))
+        c = 1 + num_containers * virtual_cores
+        if met['availableVirtualCores'] < c:
+            raise KnitException('vCPU request for app (%i) exceeds cluster capa'
+                                'city (%i)' % (c, met['availableVirtualCores']))
+        nodes = self.yarn_api.nodes()
+        if all((max(mmin, memory) > n['availMemoryMB']) and
+               (virtual_cores > n['availableVirtualCores'])
+               for n in nodes):
+            # cannot test without multiple nodemanagers
+            raise KnitException('No NodeManager can fit any single container')
+        if self.hdfs:
+            df = self.hdfs.df()
+            cap = (df['capacity'] - df['used']) // 2**20
+            fs = [self.JAR_FILE_PATH] + files
+            if env:
+                fs.append(env)
+            need = sum(os.stat(f).st_size for f in fs) // 2**20
+            # NB: if replication > 1 this might not be enough
+            if cap < need:
+                raise KnitException('HDFS space requirement (%iMB) exceeds'
+                                    'capacity (%iMB)' % (need, cap))
+
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
-              files=[], app_name="knit", queue="default"):
+              files=[], app_name="knit", queue="default", checks=True):
         """
         Method to start a yarn app with a distributed shell
 
@@ -150,6 +198,8 @@ class Knit(object):
             Application name shown in YARN (default: "knit")
         queue: String
             RM Queue to use while scheduling (default: "default")
+        checks: bool=True
+            Whether to run pre-flight checks before submitting app to YARN
 
         Returns
         -------
@@ -164,6 +214,9 @@ class Knit(object):
             if not isinstance(files, list):
                 raise KnitException("File argument must be a list of strings")
 
+        if checks:
+            self._pre_flight_checks(num_containers, virtual_cores, memory, env,
+                                    files, queue)
         # From https://github.com/apache/spark/blob/d83c2f9f0b08d6d5d369d9fae04cdb15448e7f0d/python/pyspark/java_gateway.py
         # thank you spark
 
@@ -207,8 +260,9 @@ class Knit(object):
             long_timeout -= 1
 
         if gateway_port is None:
-            raise Exception("Java gateway process exited before sending the"
-                            " driver its port number")
+            raise Exception("The JVM Knit client failed to launch successfully."
+                            " Check that java is installed and the Knit JAR"
+                            " file exists.")
 
         gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
         self.client = gateway.entry_point
@@ -227,7 +281,14 @@ class Knit(object):
                 break
 
         if master_rpcport == -1:
-            raise Exception("YARN master container did not report back")
+            raise Exception(
+"""The application master JVM process failed to report back. This can mean:
+ - that the YARN cluster cannot scheduler adequate resources - check
+   k.yarn_api.cluster_metrics() and other diagnostic methods;
+ - that the ApplicationMaster crashed - check the application logs, k.logs();
+ - that the cluster is otherwise unhealthy - check the RM and NN logs 
+   (use k.yarn_api.system_logs() to find these on a one-node system
+""")
         master_rpchost = self.client.masterRPCHost()
 
         gateway = JavaGateway(GatewayClient(
@@ -262,24 +323,20 @@ class Knit(object):
         """
         Method to return active containers
 
-            Calls getContainers in Client.scala which returns comma delimited
-            containerIds
-
         Returns
         -------
         container_list: List
-            List of str
+            List of dicts with each container's details
 
         """
-        return self.client.getContainers().split(',')
+        return self.yarn_api.app_containers(self.app_id)
 
     def get_container_statuses(self):
-        """Get status info for each container via CLI
-        
+        """Get status info for each container
+
         Returns dict where the values are the raw text output.
         """
-        return {c: self.yarn_api.container_status(c)
-                for c in self.get_containers()}
+        return {c['id']: c['state'] for c in self.get_containers()}
 
     def remove_containers(self, container_id):
         """
@@ -299,6 +356,9 @@ class Knit(object):
         None
 
         """
+        if container_id not in self.get_container_statuses():
+            raise KnitException('Attempt to remove container nor owned by this'
+                                'app: ' + container_id)
         self.master.removeContainer(str(container_id))
 
     @staticmethod
@@ -403,7 +463,8 @@ class Knit(object):
         if self.proc is not None:
             self.client_gateway.shutdown()
             if on_windows:
-                subprocess.call(["cmd", "/c", "taskkill", "/f", "/t", "/pid", str(self.proc.pid)])
+                call(["cmd", "/c", "taskkill", "/f", "/t", "/pid",
+                      str(self.proc.pid)])
             self.proc.terminate()
             self.proc.communicate()
             self.proc = None
@@ -447,6 +508,10 @@ class Knit(object):
         Useful for checking on the contents of the staging directory.
         Will be automatically generated using this instance's configuration,
         but can instead directly set ``self._hdfs`` if necessary.
+
+        Note: if the namenode/port is not defined in the conf, will not attempt
+        a connection, since it can take a while trying to connect to
+        localhost:8020.
         """
         if self._hdfs is None:
             try:

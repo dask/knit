@@ -73,7 +73,7 @@ class DaskYARNCluster(object):
     def scheduler_address(self):
         return self.local_cluster.scheduler_address
 
-    def start(self, n_workers, cpus=1, memory=2048):
+    def start(self, n_workers, cpus=1, memory=2048, checks=True):
         """
         Initiate workers. If required, environment is first built and uploaded
         to HDFS, and then a YARN application with the required number of
@@ -85,8 +85,10 @@ class DaskYARNCluster(object):
             How many containers to create
         cpus: int=1
             How many CPU cores is available in each container
-        memory: int=4000
+        memory: int=2048
             Memory available to each dask worker (in MB)
+        checks: bool=True
+            Whether to run pre-flight checks before submitting app to YARN
         
         Returns
         -------
@@ -121,8 +123,8 @@ class DaskYARNCluster(object):
                       self.local_cluster.scheduler.address)
 
         app_id = self.knit.start(command, env=self.env,
-                                 num_containers=n_workers,
-                                 virtual_cores=cpus, memory=memory)
+                                 num_containers=n_workers, virtual_cores=cpus,
+                                 memory=memory, checks=checks)
         self.app_id = app_id
         return app_id
 
@@ -147,9 +149,9 @@ class DaskYARNCluster(object):
         """
 
         # remove container ...00001 -- this is applicationMaster's container and
-        # should not be remove or counted as a worker
+        # should not be removed or counted as a worker
 
-        containers = self.knit.get_containers()
+        containers = list(self.knit.get_container_statuses())
         containers.sort()
         self.application_master_container = containers.pop(0)
         return containers

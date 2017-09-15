@@ -2,17 +2,13 @@ import os
 import shutil
 import uuid
 import pytest
+import tempfile
 import zipfile
 
 
 from knit.exceptions import CondaException
 from knit.env import CondaCreator
 
-def check_docker():
-    """check if inside docker container"""
-    return os.path.exists('/.dockerenv')
-
-inside_docker = check_docker
 env_name = 'test_env'
 
 
@@ -24,8 +20,18 @@ def c():
     finally:
         shutil.rmtree(c.conda_envs)
 
+@pytest.yield_fixture
+def tmp():
+    d = tempfile.mkdtemp()
+    try:
+        yield d
+    finally:
+        shutil.rmtree(d)
 
-def test_miniconda_install(c):
+
+def test_miniconda_install(tmp):
+    c = CondaCreator(conda_root=tmp)
+    assert tmp in c.conda_bin
     assert os.path.exists(c.conda_bin)
 
 

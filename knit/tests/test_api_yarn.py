@@ -31,3 +31,10 @@ def test_info(y):
 def test_logs(y):
     with pytest.raises(YARNException):
         y.logs("invalid_app_id_555")
+
+
+def test_syslogs(y):
+    # this will fail if running tests on real cluster
+    out = y.system_logs()
+    assert 'rm_proc' in out
+    assert out['single_node']

@@ -5,18 +5,16 @@ import sys
 if sys.version_info < (3,):
     FileNotFoundError = IOError
     PermissionError = IOError
-    from urlparse import urlparse
-    
+
 else:
     PermissionError = PermissionError
     FileNotFoundError = FileNotFoundError
-    from urllib.parse import urlparse
-    
+
     
 try:
     from subprocess import check_output
 
-except ImportError:
+except ImportError:  # pragma: no cover
     import subprocess
     def check_output(*popenargs, **kwargs):
         """Backported from Python 2.7 as it's implemented as pure python on stdlib."""

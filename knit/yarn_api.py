@@ -1,15 +1,18 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import os
 import re
 import requests
+import socket
 from subprocess import STDOUT
 try:
     from subprocess import SubprocessError
-except ImportError:
+except ImportError:  # pragma: no cover
     # py2
     from subprocess import CalledProcessError as SubprocessError
 import time
+import warnings
 
 from .utils import shell_out, get_log_content
 from .exceptions import YARNException
@@ -149,10 +152,11 @@ class YARNAPI(object):
             try:
                 out = shell_out(cmd)
                 break
-            except SubprocessError:
+            except SubprocessError:  # pragma: no cover
                 retries -= 1
                 if retries < 0:
-                    raise RuntimeError('Retries exceeded when fetching logs for ' + app_id)
+                    raise RuntimeError('Retries exceeded when fetching logs for'
+                                       ' ' + app_id)
                 time.sleep(delay)
         logs = {}
         container = None
@@ -177,7 +181,11 @@ class YARNAPI(object):
         return logs
 
     def container_status(self, container_id):
-        """Ask the YARN shell about the given container"""
+        """Ask the YARN shell about the given container
+
+        Better to use app_containers, assuming you know the app_id, which
+        is normally "_".join(container_id.split("_")[:3])
+        """
         cmd = ["yarn", "container", "-status", container_id]
         return str(shell_out(cmd))
 
@@ -236,14 +244,14 @@ class YARNAPI(object):
         try:
             out = shell_out(cmd, stderr=STDOUT)
             return "Killed application" in out
-        except:
+        except SubprocessError:
             return False
 
     def _verify_response(self, r):
         if not r.ok:
             try:
                 raise YARNException(r.json()['RemoteException']['message'])
-            except ValueError:
+            except (ValueError, IndexError):
                 raise YARNException(r.text)
 
     def cluster_info(self):
@@ -276,4 +284,36 @@ class YARNAPI(object):
         self._verify_response(r)
         return r.json()['nodes']['node']
 
+    def system_logs(self):
+        """Trouble-shooting method
 
+        This will check for RM and NM processes on this machine, and return
+        their logs, if possible.
+        """
+        nodes = self.nodes()
+        ips = set((socket.gethostbyname_ex(socket.gethostname())[2] +
+                   socket.gethostbyname_ex('localhost')[2]))
+        on_rm = socket.gethostbyname(self.rm) in ips
+        single_node = on_rm and len(nodes) == 1 and (
+            socket.gethostbyname(nodes[0]['nodeHostName']) in ips)
+        out = {'single_node': single_node, 'on_rm': on_rm}
+        try:
+            import psutil
+            for p in psutil.process_iter():
+                if any('NodeManager' in s for s in p.cmdline()):
+                    out['nm_proc'] = p
+                    log = os.path.join([s.split('=')[1] for s in p.cmdline()
+                                        if s.startswith('-Dyarn.log.dir')][0],
+                                       [s.split('=')[1] for s in p.cmdline()
+                                        if s.startswith('-Dyarn.log.file')][0])
+                    out['nm_logfile'] = log
+                if any('ResourceManager' in s for s in p.cmdline()):
+                    out['rm_proc'] = p
+                    log = os.path.join([s.split('=')[1] for s in p.cmdline()
+                                        if s.startswith('-Dyarn.log.dir')][0],
+                                       [s.split('=')[1] for s in p.cmdline()
+                                        if s.startswith('-Dyarn.log.file')][0])
+                    out['rm_logfile'] = log
+        except ImportError:
+            warnings.warn('psutil is not installed')
+        return out
