@@ -15,7 +15,7 @@ before_install:
   - sleep 20
 
 install:
-  - docker exec -it $CONTAINER_ID conda create -y -n test python=$TRAVIS_PYTHON_VERSION pytest dask distributed
+  - docker exec -it $CONTAINER_ID conda create -y -n test python=$TRAVIS_PYTHON_VERSION pytest dask distributed nomkl
 
 script:
   - docker exec -it $CONTAINER_ID bash /knit/continuous_integration/simple_test.sh

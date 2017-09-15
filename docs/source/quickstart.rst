@@ -69,6 +69,11 @@ monitoring data.
 Often we track the ``state`` of an application.  Possible ``states`` include: ``NEW``,
 ``NEW_SAVING``, ``SUBMITTED``, ``ACCEPTED``, ``RUNNING``, ``FINISHED``, ``FAILED``, ``KILLED``
 
+Further details on the current functioning of the cluster are available via the connected
+``yarn_api`` class which can help with trouble shooting: ``cluster_metrics()``, ``nodes()``,
+``systems_logs``.
+
+
 Logs
 ~~~~
 

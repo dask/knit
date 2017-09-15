@@ -73,8 +73,8 @@ def clear():
             k = Knit()
             import hdfs3
             hdfs = hdfs3.HDFileSystem()
-            hdfs.rm(k.knit_home, recursive=True)
-        except ImportError:
+            hdfs.rm(k.hdfs_home, recursive=True)
+        except:
             pass
 
 

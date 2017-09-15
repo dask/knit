@@ -30,11 +30,11 @@ def miniconda_url():
     """What to download for this platform"""
     if sys.platform.startswith('linux'):
         url = miniconda_urls['linux']
-    elif sys.platform.startswith('darwin'):
+    elif sys.platform.startswith('darwin'):   # pragma: no cover
         url = miniconda_urls['darwin']
-    else:
+    else:  # pragma: no cover
         url = miniconda_urls['win']
-    if not sys.maxsize > 2 ** 32:
+    if not sys.maxsize > 2 ** 32:  # pragma: no cover
         # 64bit check
         url = url.replace("_64", "")
     return url
@@ -80,6 +80,8 @@ class CondaCreator(object):
                 self.conda_root = self.conda_info['conda_prefix']
             else:
                 self.conda_root = os.path.join(here, 'tmp_conda')
+        else:
+            self.conda_root = conda_root
         self.conda_bin = os.path.join(self.conda_root, 'bin', 'conda')
         if not os.path.exists(self.conda_bin):
             self._install_miniconda(self.conda_root, miniconda_url)
@@ -88,6 +90,10 @@ class CondaCreator(object):
         self.channels = channels or []
 
     def _install_miniconda(self, root, url):
+        if os.path.exists(root):
+            # conda wants to create the dir - plus this errors if location
+            # is not empty
+            os.rmdir(root)
         url = url or miniconda_url()
         tmp = tempfile.mkdtemp()
         minifile = os.path.join(tmp, 'Miniconda3')

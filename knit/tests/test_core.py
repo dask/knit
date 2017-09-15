@@ -4,7 +4,7 @@ import pytest
 import socket
 
 from knit import Knit
-from knit.exceptions import HDFSConfigException, KnitException
+from knit.exceptions import YARNException, KnitException
 
 
 def check_docker():
@@ -79,6 +79,15 @@ def test_cmd(k):
     assert hostname in str(logs1)
 
 
+def test_allocation_errors(k):
+    with pytest.raises(KnitException):
+        k.start('env', 1, memory=1000000000)
+    with pytest.raises(KnitException):
+        k.start('env', 1, virtual_cores=1100000)
+    with pytest.raises(KnitException):
+        k.start('env', 10000, virtual_cores=1, memory=1)
+
+
 def test_multiple_containers(k):
     cmd = "sleep 30"
     k.start(cmd, num_containers=2, memory=128)
@@ -104,32 +113,25 @@ def test_add_remove_containers(k):
 
     wait_for_status(k, 'RUNNING')
 
-    got_containers = wait_for_containers(k, 2)
+    assert wait_for_containers(k, 2)
 
     containers = k.get_containers()
     assert len(containers) == 2
 
     k.add_containers(num_containers=1)
 
-    got_more_containers = wait_for_containers(k, 3)
+    assert wait_for_containers(k, 3)
 
-    containers = k.get_containers()
+    containers = list(k.get_container_statuses())
     assert len(containers) == 3
     k.remove_containers(containers[1])
 
-    got_more_containers = wait_for_containers(k, 2)
+    assert wait_for_containers(k, 2)
     containers = k.get_containers()
     assert len(containers) == 2
 
-    # wait for job to finish
-    if not k.wait_for_completion(30):
-        k.kill()
-
-    if not (got_containers and got_more_containers):
-        logs = k.logs(shell=True)
-        print(logs)
-
-    assert got_containers and got_more_containers
+    with pytest.raises(KnitException):
+        k.remove_containers('blah')
 
 
 def test_memory(k):
@@ -222,20 +224,11 @@ def test_logs(k):
     assert k.logs()
 
 
-# temporarily removing test until vCore handling is better resolved in the core
-# def test_vcores(k):
-#     cmd = "sleep 10"
-#     appId = k.start(cmd, num_containers=1, memory=300, virtual_cores=2)
-#
-#     time.sleep(2)
-#     status = k.status(appId)
-#
-#     while status['app']['state'] != 'RUNNING':
-#         status = k.status(appId)
-#         time.sleep(2)
-#
-#     time.sleep(2)
-#     status = k.status(appId)
-#
-#     assert status['app']['allocatedVCores'] == 3
-#
+def test_kill_all(k):
+    # this is really a yarn api test
+    cmd = "sleep 100"
+    k.start(cmd, num_containers=1)
+    # kill all knit apps
+    k.yarn_api.kill_all()
+    time.sleep(2)
+    assert k.runtime_status() == 'KILLED'

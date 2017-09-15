@@ -74,10 +74,6 @@ def hdfs_conf(confd, more_files=None):
         # HA override
         c['nn'] = c["dfs.nameservices"].split(',', 1)[0]
         c['nn_port'] = None
-    if 'nn' not in c:
-        # no host found at all, use defaults
-        c['nn'] = conf_defaults['nn']
-        c['nn_port'] = conf_defaults['nn_port']
     if 'dfs.replication' in c:
         c['replication_factor'] = c['dfs.replication']
     else:

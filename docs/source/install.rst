@@ -5,6 +5,8 @@ The runtime requirements of ``knit`` are python, lxml, requests, py4j. Python ve
 2.7, 3.5 and 3.6 are currently supported. Dask is required
 to launch a Dask cluster. These are all available via conda (py4j on the conda-forge channel).
 
+Testing depends on ``pytest``.
+
 Easy
 ~~~~
 
@@ -15,12 +17,16 @@ Use ``pip`` or ``conda`` to install::
    $ pip install knit --upgrade
 
 
+For dask clusters, you also need dask itself::
+
+   $ conda install dask distributed
+
 Source
 ~~~~~~
 
 The following steps can be used to install and run ``knit`` from source.
 
-Update and install system dependencies:
+Update and install system dependencies (e.g., for debian systems):
 
 .. code-block:: bash
 
@@ -40,3 +46,16 @@ Clone git repository and build maven project:
    $ git clone https://github.com/dask/knit
    $ cd knit
    $ python setup.py install mvn
+
+Testing on Docker
+~~~~~~~~~~~~~~~~~
+
+If you would like to test this package, but don't have a YARN cluster hanging around, you
+could make a small test one in your machine. This is essentially how the Continuous Integration tests
+work.
+
+   $ export CONTAINER_ID=`docker run -d mdurant/hadoop`
+   $ docker exec -it $CONTAINER_ID bash
+   # conda install dask distributed -y
+   # conda install -c conda-forge lxml py4j knit
+   # py.test -vv knit
