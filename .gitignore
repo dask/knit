@@ -31,4 +31,7 @@ knit/tmp_conda/
 knit.egg-info/
 build/
 
+#Pycharm
+.idea/
+
 *.swp

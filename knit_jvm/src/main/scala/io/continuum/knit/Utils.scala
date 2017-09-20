@@ -74,7 +74,7 @@ object Utils extends Logging {
     val replicationFactor = sys.env("REPLICATION_FACTOR").toShort
 
     val FILE_PATH = new File(filePath).getAbsolutePath()
-    logger.info(s"Attemping upload of $FILE_PATH to $stagingDirPath")
+    logger.info(s"Attempting upload of $FILE_PATH to $stagingDirPath")
 
     // upload all files to stagingDir
     List(FILE_PATH).foreach {
