@@ -166,6 +166,33 @@ def test_cmd_w_conda_env(k):
     assert "'final'" in str(logs)  # part of version string
 
 
+def test_hdfs_home():
+    hdfs3 = pytest.importorskip('hdfs3')
+    hdfs = hdfs3.HDFileSystem()
+    d = '/tmp/test'
+    try:
+        hdfs.mkdir(d)
+        k = Knit(nn='localhost', rm='localhost', nn_port=8020, rm_port=8088,
+               replication_factor=1, hdfs_home=d)
+
+        env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
+        k.start('env', env=env_zip, memory=128)
+
+        assert d + '/.knitDeps' in hdfs.ls(d, False)
+        assert d + "/.knitDeps/knit-1.0-SNAPSHOT.jar" in hdfs.ls(d + '/.knitDeps', False)
+        assert d + "/.knitDeps/dev.zip" in hdfs.ls(d + '/.knitDeps', False)
+        if not k.wait_for_completion(30):
+            k.kill()
+
+        time.sleep(5)  # log aggregation
+        logs = k.logs()
+        assert "PYTHON_BIN=" in str(logs)
+        assert "CONDA_PREFIX=" in str(logs)
+    finally:
+        hdfs.rm(d, True)
+        k.kill()
+
+
 cur_dir = os.path.dirname(__file__)
 txt_file = os.path.join(cur_dir, 'files', 'upload_file.txt')
 py_file = os.path.join(cur_dir, 'files', 'read_uploaded.py')

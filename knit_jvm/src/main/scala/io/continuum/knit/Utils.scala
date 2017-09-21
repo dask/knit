@@ -70,7 +70,7 @@ object Utils extends Logging {
   def uploadFile(filePath: String)(implicit conf: YarnConfiguration) = {
     val fs = FileSystem.get(conf)
     val stagingDir = ".knitDeps"
-    val stagingDirPath = new Path(fs.getHomeDirectory(), stagingDir)
+    val stagingDirPath = new Path(sys.env("HDFS_KNIT_DIR"), stagingDir)
     val replicationFactor = sys.env("REPLICATION_FACTOR").toShort
 
     val FILE_PATH = new File(filePath).getAbsolutePath()
