@@ -189,6 +189,7 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
           env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
           env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
           env("LC_ALL") = "C.UTF-8"
+          env("LANG") = "C.UTF-8"
           localResources("PYTHON_DIR") = appMasterPython
         }
   
