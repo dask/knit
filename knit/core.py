@@ -100,7 +100,7 @@ class Knit(object):
         self.KNIT_HOME = knit_home
         self.upload_always = upload_always
         self.hdfs_home = hdfs_home or self.conf.get('dfs.user.home.base.dir',
-                                               '/user/' + self.conf['user'])
+                                               '/user/' + self.conf.get('user', conf['user']))
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
