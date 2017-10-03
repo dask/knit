@@ -73,7 +73,8 @@ class DaskYARNCluster(object):
     def scheduler_address(self):
         return self.local_cluster.scheduler_address
 
-    def start(self, n_workers, cpus=1, memory=2048, checks=True):
+    def start(self, n_workers=1, cpus=1, memory=2048, checks=True,
+              **kwargs):
         """
         Initiate workers. If required, environment is first built and uploaded
         to HDFS, and then a YARN application with the required number of
@@ -89,6 +90,7 @@ class DaskYARNCluster(object):
             Memory available to each dask worker (in MB)
         checks: bool=True
             Whether to run pre-flight checks before submitting app to YARN
+        kwargs: passed to ``Knit.start()``
         
         Returns
         -------
@@ -124,7 +126,7 @@ class DaskYARNCluster(object):
 
         app_id = self.knit.start(command, env=self.env,
                                  num_containers=n_workers, virtual_cores=cpus,
-                                 memory=memory, checks=checks)
+                                 memory=memory, checks=checks, **kwargs)
         self.app_id = app_id
         return app_id
 

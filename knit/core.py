@@ -114,7 +114,7 @@ class Knit(object):
         self._hdfs = None
 
     def __str__(self):
-        return "Knit<RM={2}:{3}>".format(self.conf['rm'], self.conf['rm_port'])
+        return "Knit<RM={0}:{1}>".format(self.conf['rm'], self.conf['rm_port'])
 
     __repr__ = __str__
 
@@ -169,7 +169,8 @@ class Knit(object):
                                     'capacity (%iMB)' % (need, cap))
 
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
-              files=[], app_name="knit", queue="default", checks=True):
+              files=[], app_name="knit", queue="default", checks=True,
+              lang='C.UTF-8'):
         """
         Method to start a yarn app with a distributed shell
 
@@ -200,6 +201,9 @@ class Knit(object):
             RM Queue to use while scheduling (default: "default")
         checks: bool=True
             Whether to run pre-flight checks before submitting app to YARN
+        lang: str
+            Environment variable language setting, required for ``click`` to
+            successfully read from the shell.
 
         Returns
         -------
@@ -269,7 +273,7 @@ class Knit(object):
         self.client_gateway = gateway
         upload = self.check_env_needs_upload(env)
         self.app_id = self.client.start(env, ','.join(files), app_name, queue,
-                                        str(upload))
+                                        str(upload), lang)
 
         long_timeout = 100
         master_rpcport = -1
@@ -280,7 +284,7 @@ class Knit(object):
             if long_timeout < 0:
                 break
 
-        if master_rpcport == -1:
+        if master_rpcport in [-1, 'N/A']:
             raise Exception(
 """The application master JVM process failed to report back. This can mean:
  - that the YARN cluster cannot scheduler adequate resources - check

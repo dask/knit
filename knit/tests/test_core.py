@@ -236,6 +236,16 @@ def test_yarn_kill_status(k):
     assert status in ['KILLED', 'NONE']
 
 
+def test_lang(k):
+    cmd = "env"
+    k.start(cmd, num_containers=1, lang='en_US.utf-8')
+
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    out = k.logs()
+    assert "LANG=en_US.utf-8" in str(out)
+
+
 def test_logs(k):
     cmd = "sleep 10"
     k.start(cmd, num_containers=1)
