@@ -114,7 +114,7 @@ class Knit(object):
         self._hdfs = None
 
     def __str__(self):
-        return "Knit<RM={2}:{3}>".format(self.conf['rm'], self.conf['rm_port'])
+        return "Knit<RM={0}:{1}>".format(self.conf['rm'], self.conf['rm_port'])
 
     __repr__ = __str__
 

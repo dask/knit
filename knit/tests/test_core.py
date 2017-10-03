@@ -242,6 +242,7 @@ def test_lang(k):
 
     wait_for_status(k, 'FINISHED')
     time.sleep(2)
+    out = k.logs()
     assert "LANG=en_US.utf-8" in str(out)
 
 
