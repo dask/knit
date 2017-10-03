@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class YARNAPI(object):
+    timeout = 2  # for REST HTTP calls
+
     def __init__(self, rm, rm_port, scheme='http'):
         self.rm = rm
         self.rm_port = rm_port
@@ -40,18 +42,20 @@ class YARNAPI(object):
             # this query allows for filtering on a number of parameters
             url = self.url + 'cluster/apps/'
             logger.debug("Getting Resource Manager Info: {0}".format(url))
-            r = requests.get(url)
+            r = requests.get(url, timeout=self.timeout)
             self._verify_response(r)
             data = r.json()
             return (data.get('apps', None) or {'app': []})['app']
         else:
-            r = requests.get(self.url + 'cluster/apps/{}'.format(app_id))
+            r = requests.get(self.url + 'cluster/apps/{}'.format(app_id),
+                             timeout=self.timeout)
             self._verify_response(r)
             return r.json()['app']
 
     def app_attempts(self, app_id):
         """List of attempt details for given app"""
-        r = requests.get(self.url + 'cluster/apps/{}/appattempts'.format(app_id))
+        r = requests.get(self.url + 'cluster/apps/{}/appattempts'.format(
+                app_id), timeout=self.timeout)
         self._verify_response(r)
         return r.json()['appAttempts']['appAttempt']
 
@@ -81,7 +85,7 @@ class YARNAPI(object):
 
         url = "http://{0}/ws/v1/node/containers".format(
             amHostHttpAddress)
-        r = requests.get(url)
+        r = requests.get(url, timeout=self.timeout)
         self._verify_response(r)
 
         data = r.json()['containers']
@@ -108,9 +112,13 @@ class YARNAPI(object):
         Parameters
         ----------
         app_id: str
-             A yarn application ID string
+            A yarn application ID string
         shell: bool
-             Shell out to yarn CLI (default False)
+            Shell out to yarn CLI (default False)
+        retries: int
+            If CLI is not returning info, retry this many times
+        delay: number
+            Seconds to wait between retries
 
         Returns
         -------
@@ -130,12 +138,12 @@ class YARNAPI(object):
                     url = "{0}/stdout/?start=0".format(c['containerLogsLink'])
                     logger.debug("Gather stdout/stderr data from {0}:"
                                  " {1}".format(c['nodeId'], url))
-                    r = requests.get(url)
+                    r = requests.get(url, timeout=self.timeout)
                     log['stdout'] = get_log_content(r.text)
 
                     # grab stderr
                     url = "{0}/stderr/?start=0".format(c['containerLogsLink'])
-                    r = requests.get(url)
+                    r = requests.get(url, timeout=self.timeout)
                     log['stderr'] = get_log_content(r.text)
 
                     logs[c['id']] = log
@@ -191,7 +199,8 @@ class YARNAPI(object):
 
     def state(self, app_id):
         """Current state of given application"""
-        r = requests.get(self.url + 'cluster/apps/{}/state'.format(app_id))
+        r = requests.get(self.url + 'cluster/apps/{}/state'.format(app_id),
+                timeout=self.timeout)
         self._verify_response(r)
         return r.json()['state']
     
@@ -256,31 +265,32 @@ class YARNAPI(object):
 
     def cluster_info(self):
         """YARN cluster information: driver, version..."""
-        r = requests.get(self.url + 'cluster')
+        r = requests.get(self.url + 'cluster', timeout=self.timeout)
         self._verify_response(r)
         return r.json()['clusterInfo']
 
     def cluster_metrics(self):
         """YARN cluster global capacity/allocations"""
-        r = requests.get(self.url + 'cluster/metrics')
+        r = requests.get(self.url + 'cluster/metrics', timeout=self.timeout)
         self._verify_response(r)
         return r.json()['clusterMetrics']
 
     def scheduler(self):
         """State of the scheduler/queue"""
-        r = requests.get(self.url + 'cluster/scheduler')
+        r = requests.get(self.url + 'cluster/scheduler', timeout=self.timeout)
         self._verify_response(r)
         return r.json()['scheduler']
 
     def app_stats(self):
         """Number of apps of various states"""
-        r = requests.get(self.url + 'cluster/appstatistics')
+        r = requests.get(self.url + 'cluster/appstatistics',
+                         timeout=self.timeout)
         self._verify_response(r)
         return r.json()['appStatInfo']
 
     def nodes(self):
         """Info on YARN's worker nodes"""
-        r = requests.get(self.url + 'cluster/nodes')
+        r = requests.get(self.url + 'cluster/nodes', timeout=self.timeout)
         self._verify_response(r)
         return r.json()['nodes']['node']
 
