@@ -91,16 +91,16 @@ class Knit(object):
             self.conf.update(pars)
         self.conf.update(kwargs)
 
-        if conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
-            self.yarn_api = YARNAPI(conf['rm'], conf['rm_port_https'],
+        if self.conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
+            self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port_https'],
                                     scheme='https')
         else:
-            self.yarn_api = YARNAPI(conf['rm'], conf['rm_port'])
+            self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port'])
 
         self.KNIT_HOME = knit_home
         self.upload_always = upload_always
-        self.hdfs_home = hdfs_home or conf.get('dfs.user.home.base.dir',
-                                               '/user/' + conf['user'])
+        self.hdfs_home = hdfs_home or self.conf.get('dfs.user.home.base.dir',
+                                               '/user/' + self.conf.get('user', conf['user']))
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
