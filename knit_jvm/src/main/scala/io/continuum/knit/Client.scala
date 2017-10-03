@@ -78,7 +78,8 @@ object Client extends Logging {
     System.exit(0)
   }
   
-  def start(pythonEnv: String, files: String, appName: String, queue: String, upload: String) : String = {
+  def start(pythonEnv: String, files: String, appName: String, queue: String, upload: String,
+            lang: String) : String = {
     logger.info("Starting Application Master")
 
     implicit val conf = new YarnConfiguration()
@@ -116,7 +117,8 @@ object Client extends Logging {
     val env = collection.mutable.Map[String, String]()
     env("KNIT_USER") = UserGroupInformation.getCurrentUser.getShortUserName
     env("KNIT_YARN_STAGING_DIR") = stagingDirPath.toString
-    
+    env("KNIT_LANG") = lang
+
     if (files.length > 0) {
       val fileArray = files.split(",")
       for (fileName <- fileArray) {

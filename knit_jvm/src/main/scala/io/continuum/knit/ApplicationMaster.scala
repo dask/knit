@@ -142,6 +142,7 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
   override def onContainersAllocated(containers: java.util.List[Container]) = {
     val stagingDir = ".knitDeps"
     val user = sys.env.get("KNIT_USER")
+    val lang = sys.env.get("KNIT_LANG")
     val stagingDirPath = new Path(System.getenv("KNIT_YARN_STAGING_DIR"))
 
     logger.debug(s"User: $user StagingDir: $stagingDirPath")
@@ -188,11 +189,12 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
           // set up local ENV
           env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
           env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
-          env("LC_ALL") = "C.UTF-8"
-          env("LANG") = "C.UTF-8"
           localResources("PYTHON_DIR") = appMasterPython
         }
-  
+        logger.debug(s"Setting container language to $lang")
+        env("LC_ALL") = s"$lang"
+        env("LANG") = s"$lang"
+
         setUpEnv(env)
         
         val ctx = Records.newRecord(classOf[ContainerLaunchContext])
