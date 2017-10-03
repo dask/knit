@@ -237,13 +237,12 @@ def test_yarn_kill_status(k):
 
 
 def test_lang(k):
-    cmd = "env; sleep 10"
-    k.start(cmd, num_containers=1, lang='en_CA.utf-8')
+    cmd = "env"
+    k.start(cmd, num_containers=1, lang='en_US.utf-8')
 
-    wait_for_status(k, 'RUNNING')
-
-    out = k.logs()
-    import pdb; pdb.set_trace()
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    assert "LANG=en_US.utf-8" in str(out)
 
 
 def test_logs(k):

@@ -170,7 +170,7 @@ class Knit(object):
 
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
               files=[], app_name="knit", queue="default", checks=True,
-              lang='en_US.utf-8'):
+              lang='C.UTF-8'):
         """
         Method to start a yarn app with a distributed shell
 
