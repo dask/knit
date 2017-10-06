@@ -25,7 +25,7 @@ def wait_for_status(k, status, timeout=30):
 
     time.sleep(1)
     return timeout > 0
-        
+
 
 def wait_for_containers(k, running_containers, timeout=30):
     cur_running_containers = k.status()['runningContainers']
@@ -238,12 +238,15 @@ def test_yarn_kill_status(k):
 
 def test_lang(k):
     cmd = "env"
-    k.start(cmd, num_containers=1, lang='en_US.utf-8')
+    orig_lang = k.lang
+    k.lang = 'en_US.utf-8'
+    k.start(cmd, num_containers=1)
 
     wait_for_status(k, 'FINISHED')
     time.sleep(2)
     out = k.logs()
     assert "LANG=en_US.utf-8" in str(out)
+    k.lang = orig_lang
 
 
 def test_logs(k):
