@@ -101,6 +101,7 @@ class Knit(object):
         self.upload_always = upload_always
         self.hdfs_home = hdfs_home or self.conf.get('dfs.user.home.base.dir',
                                                '/user/' + self.conf.get('user', conf['user']))
+        self.lang = self.conf.get('lang', 'C.UTF-8')
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
@@ -169,8 +170,7 @@ class Knit(object):
                                     'capacity (%iMB)' % (need, cap))
 
     def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
-              files=[], app_name="knit", queue="default", checks=True,
-              lang='C.UTF-8'):
+              files=[], app_name="knit", queue="default", checks=True):
         """
         Method to start a yarn app with a distributed shell
 
@@ -201,9 +201,6 @@ class Knit(object):
             RM Queue to use while scheduling (default: "default")
         checks: bool=True
             Whether to run pre-flight checks before submitting app to YARN
-        lang: str
-            Environment variable language setting, required for ``click`` to
-            successfully read from the shell.
 
         Returns
         -------
@@ -272,8 +269,9 @@ class Knit(object):
         self.client = gateway.entry_point
         self.client_gateway = gateway
         upload = self.check_env_needs_upload(env)
+
         self.app_id = self.client.start(env, ','.join(files), app_name, queue,
-                                        str(upload), lang)
+                                        str(upload), self.lang)
 
         long_timeout = 100
         master_rpcport = -1
