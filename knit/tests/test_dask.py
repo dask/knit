@@ -14,7 +14,6 @@ pytest.importorskip('dask')
 import dask.distributed
 from knit.dask_yarn import DaskYARNCluster
 from knit import CondaCreator, Knit
-from knit.conf import conf, guess_config
 from dask.distributed import Client
 from distributed.utils_test import loop
 
@@ -37,25 +36,6 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
 
     return decorator
 
-
-def test_knit_config():
-    cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
-                              autodetect=False, replication_factor=1)
-    str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
-    cluster = DaskYARNCluster(nn="pi", nn_port=31415, rm="e", rm_port=27182,
-                              autodetect=True, replication_factor=1)
-    str(cluster) == 'Knit<NN=pi:31415;RM=e:27182>'
-
-    try:
-        conf['nn'] = 'nothost'
-        d = DaskYARNCluster(autodetect=True, replication_factor=1)
-        assert d.knit.conf['nn'] == 'nothost'
-
-        d = DaskYARNCluster(autodetect=True, nn='oi', replication_factor=1)
-        assert d.knit.conf['nn'] == 'oi'
-
-    finally:
-        guess_config()
 
 python_version = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
 python_pkg = 'python=%s' % python_version

@@ -12,7 +12,7 @@ from subprocess import Popen, PIPE, call
 import struct
 import time
 
-from .conf import conf, DEFAULT_KNIT_HOME
+from .conf import get_config, DEFAULT_KNIT_HOME
 from .env import CondaCreator
 from .exceptions import KnitException, YARNException
 from .yarn_api import YARNAPI
@@ -89,10 +89,7 @@ class Knit(object):
     def __init__(self, autodetect=True, upload_always=False, hdfs_home=None,
                  knit_home=DEFAULT_KNIT_HOME, pars=None, **kwargs):
 
-        self.conf = conf.copy() if autodetect else {}
-        if pars:
-            self.conf.update(pars)
-        self.conf.update(kwargs)
+        self.conf = get_config(autodetect=autodetect, pars=pars, **kwargs)
 
         if self.conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port_https'],
