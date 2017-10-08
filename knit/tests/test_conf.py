@@ -20,7 +20,6 @@ def test_get_host_port():
 def test_infer_extra_params():
     # == defaults ==
     extra = infer_extra_params({})
-    assert extra.pop('user')
     assert extra == DEFAULTS
 
     # == replication_factor ==
