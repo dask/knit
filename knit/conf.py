@@ -58,7 +58,8 @@ DEFAULTS = {'nn': 'localhost',
             'rm': 'localhost',
             'rm_port': 8088,
             'rm_port_https': 8090,
-            'replication_factor': 3}
+            'replication_factor': 3,
+            'user': current_user()}
 
 
 def get_host_port(addr):
@@ -206,7 +207,11 @@ def load_config():
 
     if _cached_config is None:
         # Find the configuration files
-        paths = find_config_files()
+        try:
+            paths = find_config_files()
+        except ValueError:
+            _cached_config = DEFAULTS.copy()
+            return DEFAULTS.copy()
 
         # Ensure that LIBHDFS3_CONF points to the hdfs config file
         os.environ['LIBHDFS3_CONF'] = paths['hdfs']
