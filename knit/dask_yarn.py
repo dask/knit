@@ -27,7 +27,7 @@ class DaskYARNCluster(object):
     
     Parameters
     ----------
-    nn, nn_port, rm, rm_port, user, autodetect: see knit.Knit
+    nn, nn_port, rm, rm_port, user, autodetect, lang: see knit.Knit
     env: str or None
         If provided, the path of a zipped conda env to put in containers
     packages: list of str
