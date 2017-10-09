@@ -124,6 +124,7 @@ A long running Python application. Here we reuse the same environment create abo
 
 .. _ResourceManager: https://hadoop.apache.org/docs/current/hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html
 
+
 Dask Cluster
 ------------
 
@@ -134,5 +135,15 @@ To start a dask cluster on YARN
 .. code-block:: python
 
    from knit import dask_yarn
+
+   k = Knit()
+   env = k.create_env('my-environment',
+                      packages=['python=3.6', 'scikit-learn', 'pandas', 'dask'],
+                      channels=['conda-forge'])  # specify anaconda.org channels
+
    cluster = dask_yarn.DaskYARNCluster()
-   cluster.start(nworkers=4, memory=1024, cpus=2)
+
+   cluster.start(nworkers=10, memory=4096, cpus=2)
+
+   from dask.distributed import Client
+   client = Client(cluster)
