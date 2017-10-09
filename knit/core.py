@@ -53,7 +53,7 @@ class Knit(object):
         Resource Manager port (default: 8088)
     lang: str
         Environment variable language setting, required for ``click`` to
-        successfully read from the shell. (default: 'C-UTF-8')
+        successfully read from the shell. (default: 'C.UTF-8')
     user: str ('root')
         The user name from point of view of HDFS. This is only used when
         checking for the existence of knit files on HDFS, since they are stored
