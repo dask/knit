@@ -242,8 +242,13 @@ class CondaCreator(object):
             for root, dirs, files in os.walk(env_path):
                 for file in files:
                     relfile = os.path.join(
-                        os.path.relpath(root, self.conda_envs), file)
+                        os.path.relpath(root, env_dir), file)
                     absfile = os.path.join(root, file)
+                    try:
+                        os.stat(absfile)
+                    except OSError:
+                        logger.info('Skipping zip for %s' % absfile)
+                        continue
                     f.write(absfile, relfile)
             return zFile
 
