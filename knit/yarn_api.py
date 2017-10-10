@@ -260,7 +260,7 @@ class YARNAPI(object):
         if not r.ok:
             try:
                 ex = r.json()['RemoteException']
-                raise ex.get('message', str(ex))
+                raise YARNException(ex.get('message', str(ex)))
             except (ValueError, IndexError):
                 raise YARNException(r.text)
 
