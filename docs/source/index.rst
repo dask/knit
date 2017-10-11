@@ -123,6 +123,7 @@ See :doc:`the quickstart <quickstart>` to get started.
    install
    quickstart
    usage
+   troubleshooting
    api
    configuration
    examples
