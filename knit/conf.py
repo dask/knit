@@ -53,9 +53,7 @@ java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
 DEFAULT_KNIT_HOME = os.environ.get('KNIT_HOME') or java_lib_dir
 
 # standard defaults
-DEFAULTS = {'nn': 'localhost',
-            'nn_port': 8020,
-            'rm': 'localhost',
+DEFAULTS = {'rm': 'localhost',
             'rm_port': 8088,
             'rm_port_https': 8090,
             'replication_factor': 3,
@@ -84,21 +82,6 @@ def infer_extra_params(config):
     replication_factor = config.get('dfs.replication',
                                     DEFAULTS['replication_factor'])
 
-    # namenode and port
-    if 'dfs.nameservices' in config:
-        # HA override
-        nn_text = config['dfs.nameservices'].split(',', 1)[0]
-        nn, nn_port = get_host_port(nn_text)
-    elif 'dfs.namenode.rpc-address' in config:
-        # name node address
-        nn, nn_port = get_host_port(config['dfs.namenode.rpc-address'])
-    elif 'fs.defaultFS' in config:
-        # default FS in 'core'
-        nn, nn_port = get_host_port(config['fs.defaultFS'])
-    else:
-        nn = DEFAULTS['nn']
-        nn_port = DEFAULTS['nn_port']
-
     # resourcemanager and port
     if 'yarn.resourcemanager.webapp.address' in config:
         rm_addr = config['yarn.resourcemanager.webapp.address']
@@ -116,8 +99,6 @@ def infer_extra_params(config):
 
     return {'user': user,
             'replication_factor': replication_factor,
-            'nn': nn,
-            'nn_port': nn_port,
             'rm': rm,
             'rm_port': rm_port,
             'rm_port_https': rm_port_https}
@@ -150,8 +131,6 @@ def error_if_path_missing(envvar):
 def find_config_files():
     """Look for config files in common places"""
 
-    hdfs_site = 'hdfs-site.xml'
-
     # Find the configuration directory
     if 'LIBHDFS3_CONF' in os.environ:
         error_if_path_missing('LIBHDFS3_CONF')
@@ -175,8 +154,7 @@ def find_config_files():
             confd = os.getcwd()
 
     configs = {'yarn': 'yarn-site.xml',
-               'core': 'core-site.xml',
-               'hdfs': hdfs_site}
+               'core': 'core-site.xml'}
     paths = {}
 
     for name, f in configs.items():
@@ -212,9 +190,6 @@ def load_config():
         except ValueError:
             _cached_config = DEFAULTS.copy()
             return DEFAULTS.copy()
-
-        # Ensure that LIBHDFS3_CONF points to the hdfs config file
-        os.environ['LIBHDFS3_CONF'] = paths['hdfs']
 
         # Load and merge all config files
         config = {}
