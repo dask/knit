@@ -146,7 +146,7 @@ def find_config_files():
         for loc in ['/etc/hadoop/conf']:
             if os.path.exists(loc):
                 fns = os.listdir(loc)
-                if hdfs_site in fns:
+                if 'core-site.xml' in fns:
                     confd = loc
                     break
         else:
