@@ -26,26 +26,6 @@ def test_infer_extra_params():
     extra = infer_extra_params({'dfs.replication': 10})
     assert extra['replication_factor'] == 10
 
-    # == namenode and port ==
-    # HA takes priority
-    config = {'dfs.nameservices': 'priority1.com,foo.baz.com',
-              'dfs.namenode.rpc-address': 'priority2.com:8080',
-              'fs.defaultFS': 'hdfs://priority3.com:8081'}
-    extra = infer_extra_params(config)
-    assert extra['nn'] == 'priority1.com'
-    assert extra['nn_port'] is None
-    # Next is rpc-address
-    config = {'dfs.namenode.rpc-address': 'priority2.com:8080',
-              'fs.defaultFS': 'hdfs://priority3.com:8081'}
-    extra = infer_extra_params(config)
-    assert extra['nn'] == 'priority2.com'
-    assert extra['nn_port'] == 8080
-    # Next is defaultFS
-    config = {'fs.defaultFS': 'hdfs://priority3.com:8081'}
-    extra = infer_extra_params(config)
-    assert extra['nn'] == 'priority3.com'
-    assert extra['nn_port'] == 8081
-
     # == resourcemanager and port ==
     # take port from webapp.address if provided
     config = {'yarn.resourcemanager.webapp.address': 'priority1.com:1111',
@@ -66,8 +46,7 @@ def test_infer_extra_params():
 
 
 def test_get_config():
-    kwargs = dict(nn="pi", nn_port=31415, rm="e", rm_port=27182,
-                  replication_factor=1)
+    kwargs = dict(rm="e", rm_port=27182, replication_factor=1)
     config = get_config(autodetect=False, **kwargs)
     for k, v in kwargs.items():
         assert config[k] == v
