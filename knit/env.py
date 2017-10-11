@@ -237,8 +237,9 @@ class CondaCreator(object):
         zFile = os.path.join(env_dir, fname)
         
         # ZipFile does not have a contextmanager in Python 2.6
-        f = zipfile.ZipFile(zFile, 'w')
+        f = zipfile.ZipFile(zFile, 'w', allowZip64=True)
         try:
+            logger.info('Creating: %s' % zFile)
             for root, dirs, files in os.walk(env_path):
                 for file in files:
                     relfile = os.path.join(
@@ -251,6 +252,5 @@ class CondaCreator(object):
                         continue
                     f.write(absfile, relfile)
             return zFile
-
         finally:
             f.close()
