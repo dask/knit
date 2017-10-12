@@ -99,3 +99,29 @@ and use as usual, or look at ``cluster.scheduler_address`` for clients connectin
 
 Note that DaskYARNCluster can also be used as a context manager, which will ensure that it gets
 closed (and the corresponding YARN application killed) when the ``with`` context finishes.
+
+
+Instance Connections
+~~~~~~~~~~~~~~~~~~~~
+
+The main instances that you will handle in this library have attributes which
+are instances of other classes, and expose functionality. Generally, parameters are
+passed down, so that the constructor parameters for DaskYarnCluster will also be used
+for Knit (e.g., ``replication_factor``), CondaCreator (e.g., ``channels``) and YARNAPI
+(e.g., ``rm``).
+
+DaskYarnCluster:
+
+- ``.knit`` is an instance of Knit, and exposes methods to check the yarn application
+state, logs and to increase/decrease the container count
+- an instance of ``CondaCreator`` is created on-the-fly if making/zipping a conda environment
+- ``.local_cluster`` is an instance of ``dask.distributed.LocalCluster``, with no local
+workers. The only parameter passed in is ``ip``.
+
+Knit:
+
+- ``.yarn_api`` is an instance of YARNAPI, which provides commands to be directly
+executed by the ResourceManager, including several informational calls, mostly via REST
+- an instance of ``CondaCreator`` is created on-the-fly if making/zipping a conda environment
+
+
