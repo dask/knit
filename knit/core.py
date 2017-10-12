@@ -12,7 +12,7 @@ from subprocess import Popen, PIPE, call
 import struct
 import time
 
-from .conf import conf, DEFAULT_KNIT_HOME
+from .conf import get_config, DEFAULT_KNIT_HOME
 from .env import CondaCreator
 from .exceptions import KnitException, YARNException
 from .yarn_api import YARNAPI
@@ -72,6 +72,8 @@ class Knit(object):
         file in size and is newer.
     knit_home: str
         Location of knit's jar
+    hdfs: HDFileSystem instance or None
+        Used for checking files in HDFS.
 
     Note: for now, only one Knit instance can live in a single process because
     of how py4j interfaces with the JVM.
@@ -87,12 +89,10 @@ class Knit(object):
     JAVA_APP = "io.continuum.knit.Client"
 
     def __init__(self, autodetect=True, upload_always=False, hdfs_home=None,
-                 knit_home=DEFAULT_KNIT_HOME, pars=None, **kwargs):
+                 knit_home=DEFAULT_KNIT_HOME, hdfs=None, pars=None,
+                 **kwargs):
 
-        self.conf = conf.copy() if autodetect else {}
-        if pars:
-            self.conf.update(pars)
-        self.conf.update(kwargs)
+        self.conf = get_config(autodetect=autodetect, pars=pars, **kwargs)
 
         if self.conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port_https'],
@@ -102,9 +102,9 @@ class Knit(object):
 
         self.KNIT_HOME = knit_home
         self.upload_always = upload_always
-        self.hdfs_home = hdfs_home or self.conf.get('dfs.user.home.base.dir',
-                                               '/user/' + self.conf.get('user', conf['user']))
         self.lang = self.conf.get('lang', 'C.UTF-8')
+        self.hdfs_home = hdfs_home or self.conf.get(
+            'dfs.user.home.base.dir', '/user/' + self.conf['user'])
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
@@ -115,7 +115,7 @@ class Knit(object):
         self.master = None
         self.app_id = None
         self.proc = None
-        self._hdfs = None
+        self.hdfs = hdfs
 
     def __str__(self):
         return "Knit<RM={0}:{1}>".format(self.conf['rm'], self.conf['rm_port'])
@@ -506,32 +506,6 @@ class Knit(object):
         except:
             return "NONE"
 
-    @property
-    def hdfs(self):
-        """ An instance of HDFileSystem
-        
-        Useful for checking on the contents of the staging directory.
-        Will be automatically generated using this instance's configuration,
-        but can instead directly set ``self._hdfs`` if necessary.
-
-        Note: if the namenode/port is not defined in the conf, will not attempt
-        a connection, since it can take a while trying to connect to
-        localhost:8020.
-        """
-        if self._hdfs is None:
-            try:
-                import hdfs3
-                par2 = self.conf.copy()
-                par2['host'] = par2.pop('nn')
-                par2['port'] = par2.pop('nn_port')
-                del par2['replication_factor']
-                del par2['rm_port']
-                del par2['rm_port_https']
-                self._hdfs = hdfs3.HDFileSystem(pars=par2)
-            except:
-                self._hdfs = False
-        return self._hdfs
-
     def list_envs(self):
         """List knit conda environments already in HDFS
         
@@ -543,8 +517,8 @@ class Knit(object):
             files = self.hdfs.ls(self.hdfs_home + '/.knitDeps/', True)
             return [f for f in files if f['name'].endswith('.zip')]
         else:
-            raise ImportError('HDFS3 library required to list HDFS '
-                              'environments')
+            raise ImportError('Set the `hdfs` attribute to be able to list'
+                              'environments.')
 
     def check_env_needs_upload(self, env_path):
         """Upload is needed if zip file does not exist in HDFS or is older"""

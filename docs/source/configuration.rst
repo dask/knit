@@ -22,7 +22,9 @@ Connection with hdfs3
 
 Some operations, such as checking for uploaded conda environments, optionally make use of
 `hdfs3`_. The configuration system, above, and that for hdfs3 are very similar, so you may
-well not have to make any extra steps to get this working correctly for you. However, you may
+well not have to make any extra steps to get this working correctly for you; normally the
+files defining values for Yarn should be in the same location as those for HDFS. However,
+you may
 well wish to be more explicit about the configuration of the HDFileSystem instance you want
 knit to use. In this case, create the instance as usual, and assign it to the Knit instance
 as follows
@@ -30,18 +32,12 @@ as follows
 .. code-block:: python
 
    hdfs = HDFileSystem(...)
-   k = Knit(...)
-   k._hdfs = hdfs
+   k = Knit(..., hdfs=hdfs)
 
 or, similarly for a Dask cluster
 
 .. code-block:: python
 
-   cluster = DaskYARNCluster(...)
-   cluster.knit._hdfs = hdfs
-
-The special environment variable ``LIBHDFS3_CONF`` will be automatically set when parsing
-the config files, if possible. Since the library is only loaded upon the first instantiation
-of a HDFileSystem, you still have the option to change its value in ``os.environ``.
+   cluster = DaskYARNCluster(..., hdfs=hdfs)
 
 .. _hdfs3: http://hdfs3.readthedocs.io/en/latest/

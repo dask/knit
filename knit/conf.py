@@ -8,7 +8,36 @@ from __future__ import absolute_import
 
 import os
 import re
-import warnings
+try:
+    from urllib.parse import urlsplit
+except ImportError:
+    from urlparse import urlsplit
+
+
+__all__ = ('get_config', 'load_config', 'reset_config_cache')
+
+
+def get_config(autodetect=True, pars=None, **kwargs):
+    """Get configuration dictionary.
+
+    Build up a configuration dictionary based on configuration files and
+    overrides.
+
+    Parameters
+    ----------
+    autodetect : bool, optional
+        If True (default) configuration is read from files on disk. Otherwise
+        only specified configuration parameters are used.
+    pars : dict, optional
+        Extra parameters to use for overriding
+    **kwargs
+        Extra parameters to use for overriding
+    """
+    config = load_config() if autodetect else {}
+    if pars:
+        config.update(**pars)
+    config.update(**kwargs)
+    return config
 
 
 def current_user():
@@ -19,90 +48,64 @@ def current_user():
         import getpass
         return getpass.getuser()
 
-DEFAULT_USER = current_user()
+
 java_lib_dir = os.path.join(os.path.dirname(__file__), "java_libs")
 DEFAULT_KNIT_HOME = os.environ.get('KNIT_HOME') or java_lib_dir
 
 # standard defaults
-conf_defaults = {'nn': 'localhost', 'nn_port': 8020, 'rm': 'localhost',
-                 'rm_port': 8088, 'rm_port_https': 8090,
-                 'replication_factor': 3}
-conf = conf_defaults.copy()
+DEFAULTS = {'rm': 'localhost',
+            'rm_port': 8088,
+            'rm_port_https': 8090,
+            'replication_factor': 3,
+            'user': current_user()}
 
 
-def hdfs_conf(confd, more_files=None):
-    """ Load HDFS config from default locations. 
-
-    Parameters
-    ----------
-    confd: str
-        Directory location to search in
-    more_files: list of str or None
-        If given, additional filenames to query
-    """
-    files = ['core-site.xml', 'hdfs-site.xml']
-    if more_files:
-        files.extend(more_files)
-    c = {'user': DEFAULT_USER}
-    for afile in files:
-        try:
-            c.update(conf_to_dict(os.sep.join([confd, afile])))
-        except (IOError, OSError):
-            pass
-    if not c:
-        # no config files here
-        return
-    if 'fs.defaultFS' in c and c['fs.defaultFS'].startswith('hdfs'):
-        # default FS in 'core'
-        text = c['fs.defaultFS'].strip('hdfs://')
-        host = text.split(':', 1)[0]
-        port = text.split(':', 1)[1:]
-        if host:
-            c['nn'] = host
-        if port:
-            c['nn_port'] = int(port[0])
-    if 'dfs.namenode.rpc-address' in c:
-        # name node address
-        text = c['dfs.namenode.rpc-address']
-        host = text.split(':', 1)[0]
-        port = text.split(':', 1)[1:]
-        if host:
-            c['nn'] = host
-        if port:
-            c['nn_port'] = int(port[0])
-    if c.get("dfs.nameservices", None):
-        # HA override
-        c['nn'] = c["dfs.nameservices"].split(',', 1)[0]
-        c['nn_port'] = None
-    if 'dfs.replication' in c:
-        c['replication_factor'] = c['dfs.replication']
+def get_host_port(addr):
+    """Infer a host & port from a given addr"""
+    parsed = urlsplit(addr)
+    if parsed.hostname:
+        host = parsed.hostname
+        port = parsed.port
+    elif ':' in parsed.path:
+        host, port = parsed.path.split(':', 1)
+        port = int(port)
     else:
-        c['replication_factor'] = conf_defaults['replication_factor']
-    if 'yarn.resourcemanager.webapp.address' in c:
-        c['rm'], c['rm_port'] = c[
-            'yarn.resourcemanager.webapp.address'].split(':')
-    elif 'yarn.resourcemanager.hostname' in c:
-        c['rm'] = c['yarn.resourcemanager.hostname']
-        c['rm_port'] = conf_defaults['rm_port']
+        host = parsed.path
+        port = None
+    return host, port
+
+
+def infer_extra_params(config):
+    """Given a config dict, infer the values of some extra fields"""
+    user = current_user()
+
+    replication_factor = config.get('dfs.replication',
+                                    DEFAULTS['replication_factor'])
+
+    # resourcemanager and port
+    if 'yarn.resourcemanager.webapp.address' in config:
+        rm_addr = config['yarn.resourcemanager.webapp.address']
+        rm, rm_port = get_host_port(rm_addr)
     else:
-        c['rm'] = conf_defaults['rm']
-        c['rm_port'] = conf_defaults['rm_port']
-    if 'yarn.resourcemanager.webapp.https.address' in c:
-        c['rm'], c['rm_port_https'] = c[
-            'yarn.resourcemanager.webapp.https.address'].split(':')
+        rm = config.get('yarn.resourcemanager.hostname', DEFAULTS['rm'])
+        rm_port = DEFAULTS['rm_port']
+
+    # resourcemanager https port
+    if 'yarn.resourcemanager.webapp.https.address' in config:
+        rm_https_addr = config['yarn.resourcemanager.webapp.https.address']
+        rm_port_https = get_host_port(rm_https_addr)[1]
     else:
-        c['rm_port_https'] = conf_defaults['rm_port_https']
-    conf.clear()
-    conf.update(c)
+        rm_port_https = DEFAULTS['rm_port_https']
+
+    return {'user': user,
+            'replication_factor': replication_factor,
+            'rm': rm,
+            'rm_port': rm_port,
+            'rm_port_https': rm_port_https}
 
 
-def reset_to_defaults():
-    conf.clear()
-    conf.update(conf_defaults)
-
-
-def conf_to_dict(fname):
-    """ Read a hdfs-site.xml style conf file, produces dictionary """
+def config_to_dict(fname):
+    """ Read a *-site.xml style conf file, produces dictionary """
     name_match = re.compile("<name>(.*?)</name>")
     val_match = re.compile("<value>(.*?)</value>")
     conf = {}
@@ -117,33 +120,93 @@ def conf_to_dict(fname):
     return conf
 
 
-def guess_config():
-    """ Look for config files in common places """
-    d = None
+def error_if_path_missing(envvar):
+    """Raise a ValueError if the path specified by an ENVVAR is missing"""
+    path = os.environ[envvar]
+    if not os.path.exists(path):
+        raise ValueError("Environment variable `%s` points to "
+                         "non-existant location" % envvar)
+
+
+def find_config_files():
+    """Look for config files in common places"""
+
+    # Find the configuration directory
     if 'LIBHDFS3_CONF' in os.environ:
-        fdir, fn = os.path.split(os.environ['LIBHDFS3_CONF'])
-        hdfs_conf(fdir, more_files=[fn, 'yarn-site.xml'])
-        if not os.path.exists(os.environ['LIBHDFS3_CONF']):
-            del os.environ['LIBHDFS3_CONF']
-        return
+        error_if_path_missing('LIBHDFS3_CONF')
+        confd, hdfs_site = os.path.split(os.environ['LIBHDFS3_CONF'])
     elif 'HADOOP_CONF_DIR' in os.environ:
-        d = os.environ['HADOOP_CONF_DIR']
+        error_if_path_missing('HADOOP_CONF_DIR')
+        confd = os.environ['HADOOP_CONF_DIR']
     elif 'HADOOP_INSTALL' in os.environ:
-        d = os.environ['HADOOP_INSTALL'] + '/hadoop/conf'
-    if d is None:
+        error_if_path_missing('HADOOP_INSTALL')
+        confd = os.environ['HADOOP_INSTALL'] + '/hadoop/conf'
+    else:
         # list of potential typical system locations
         for loc in ['/etc/hadoop/conf']:
             if os.path.exists(loc):
                 fns = os.listdir(loc)
-                if 'hdfs-site.xml' in fns:
-                    d = loc
+                if 'core-site.xml' in fns:
+                    confd = loc
                     break
-    if d is None:
-        # fallback: local dir
-        d = os.getcwd()
-    hdfs_conf(d, more_files=['yarn-site.xml'])
-    if os.path.exists(os.path.join(d, 'hdfs-site.xml')):
-        os.environ['LIBHDFS3_CONF'] = os.path.join(d, 'hdfs-site.xml')
+        else:
+            # fallback: local dir
+            confd = os.getcwd()
+
+    configs = {'yarn': 'yarn-site.xml',
+               'core': 'core-site.xml'}
+    paths = {}
+
+    for name, f in configs.items():
+        full_path = os.path.join(confd, f)
+        if not os.path.exists(full_path):
+            raise ValueError("Failed to load `%s` configuration file at "
+                             "`%s`, file not found" % (name, full_path))
+        paths[name] = full_path
+
+    return paths
 
 
-guess_config()
+# The cached configuration
+_cached_config = None
+
+
+def load_config():
+    """Load configuration from config files.
+
+    Will error if configuration files aren't found.
+
+    Returns
+    -------
+    config : dict
+        The configuration dictionary.
+    """
+    global _cached_config
+
+    if _cached_config is None:
+        # Find the configuration files
+        try:
+            paths = find_config_files()
+        except ValueError:
+            _cached_config = DEFAULTS.copy()
+            return DEFAULTS.copy()
+
+        # Load and merge all config files
+        config = {}
+        for path in paths.values():
+            config.update(config_to_dict(path))
+
+        # Determine extra parameters
+        config.update(infer_extra_params(config))
+
+        _cached_config = config
+
+    return _cached_config.copy()
+
+
+def reset_config_cache():
+    """Reset the configuration cache.
+
+    The configuration will be recomputed on the next call to `load_config`."""
+    global _cached_config
+    _cached_config = None
