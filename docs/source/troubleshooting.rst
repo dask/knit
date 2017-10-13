@@ -98,9 +98,9 @@ Don't make a .zip of the conda root
 CondaCreator can zip up any directory, and makes copies of files referenced by
 symbolic links. Normally you would use this with a conda environment directory,
 usually in the ``/envs/`` directory of a conda installation, or created by Knit
-in a local directory especially for the purpose. If you attempt to use the root
+in a local directory especially for this purpose. If you attempt to use the root
 environment (i.e., a directory `containing` ``/envs/``), zip will fail with
-link recursion, probably after attempting make make an enormous file.
+link recursion, probably after attempting make an enormous file.
 
 
 Newer java version if .zip > 2GB
@@ -113,7 +113,7 @@ up to 4GB are supposed to be possible without it.
 If the java version running Yarn is old enough, it will not be able to handle these
 larger .zip files. ``java.util.zip.ZipException: invalid CEN header (bad signature)``
 will be printed in the ResourceManager logs.
-Either reduce the side of the conda environment, or update java on the cluster.
+Either reduce the size of the conda environment, or update java on the cluster.
 
 Dask client and workers versions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -148,7 +148,7 @@ Upon startup, the Dask cluster scheduler guesses its own IP as
 ``socket.gethostbyname(socket.gethostname())`` - this is the value that workers
 will be passed.
 
-On some networks, it is possible that the IP that workers need in ornder to be able
+On some networks, it is possible that the IP that workers need in order to be able
 to contact the scheduler is different from the value that would be guessed. The
 parameter ``ip=`` can be passed to set the correct value.
 
@@ -161,7 +161,7 @@ of the command line it receives, with the result that if the language is not spe
 you will see ``Exit 1`` and an informational statement about setting the language in the
 worker logs. A ``lang=`` is provided to set the effective language setting that the
 worker processes see. However, there are further constraints on what languages are
-permitted, set byt he host system - an unwise choice may cause errors like
+permitted, set by the host system - an unwise choice may cause errors like
 "LC.ALL=xxx: not a valid identifier", and no python process at all.
 
 System constraints
