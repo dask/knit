@@ -57,7 +57,7 @@ class YARNAPI(object):
         r = requests.get(self.url + 'cluster/apps/{}/appattempts'.format(
                 app_id), timeout=self.timeout)
         self._verify_response(r)
-        return r.json()['appAttempts']['appAttempt']
+        return r.json().get('appAttempts', {'app_attempt': []})['appAttempt']
 
     def app_containers(self, app_id=None, info=None):
         """
@@ -259,7 +259,8 @@ class YARNAPI(object):
     def _verify_response(self, r):
         if not r.ok:
             try:
-                raise YARNException(r.json()['RemoteException']['message'])
+                ex = r.json()['RemoteException']
+                raise YARNException(ex.get('message', str(ex)))
             except (ValueError, IndexError):
                 raise YARNException(r.text)
 

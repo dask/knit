@@ -237,15 +237,20 @@ class CondaCreator(object):
         zFile = os.path.join(env_dir, fname)
         
         # ZipFile does not have a contextmanager in Python 2.6
-        f = zipfile.ZipFile(zFile, 'w')
+        f = zipfile.ZipFile(zFile, 'w', allowZip64=True)
         try:
+            logger.info('Creating: %s' % zFile)
             for root, dirs, files in os.walk(env_path):
                 for file in files:
                     relfile = os.path.join(
-                        os.path.relpath(root, self.conda_envs), file)
+                        os.path.relpath(root, env_dir), file)
                     absfile = os.path.join(root, file)
+                    try:
+                        os.stat(absfile)
+                    except OSError:
+                        logger.info('Skipping zip for %s' % absfile)
+                        continue
                     f.write(absfile, relfile)
             return zFile
-
         finally:
             f.close()
