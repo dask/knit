@@ -3,7 +3,7 @@ import time
 import pytest
 import socket
 
-from knit import Knit
+from knit import Knit, zip_path
 from knit.exceptions import YARNException, KnitException
 
 
@@ -16,13 +16,15 @@ inside_docker = check_docker
 
 def wait_for_status(k, status, timeout=30):
     cur_status = k.runtime_status()
+    print("Current status is {0}, waiting for {1}".format(cur_status, status),
+          end='')
     while cur_status != status and timeout > 0:
-        print("Current status is {0}, waiting for {1}".format(cur_status, status))
-
+        print('.', end='')
         time.sleep(2)
         timeout -= 2
         cur_status = k.runtime_status()
 
+    print()
     time.sleep(1)
     return timeout > 0
 
@@ -236,11 +238,42 @@ def test_yarn_kill_status(k):
     assert status in ['KILLED', 'NONE']
 
 
+def test_env_pass(k):
+    cmd = "env"
+    k.start(cmd, envvars={'other': 'blah'}, num_containers=1)
+
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    out = k.logs()
+    assert "other=blah" in str(out)
+
+
+def test_files(k):
+    cmd = 'ls'
+    k.start(cmd, files=[__file__])
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    out = k.logs()
+    assert os.path.basename(__file__) in str(out)
+
+
+def test_files_zip(k):
+    import tempfile
+    d = tempfile.mkdtemp()
+    os.makedirs(d + '/temp')
+    open(d + '/temp/afile', 'w').write('Hello')
+    zip_path(d + '/temp')
+    k.start('ls temp.zip/temp', files=[d + '/temp.zip'])
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    out = k.logs()
+    assert 'afile' in str(out)
+
+
 def test_lang(k):
     cmd = "env"
     orig_lang = k.lang
-    k.lang = 'en_US.utf-8'
-    k.start(cmd, num_containers=1)
+    k.start(cmd, envvars={'KNIT_LANG': 'en_US.utf-8'}, num_containers=1)
 
     wait_for_status(k, 'FINISHED')
     time.sleep(2)

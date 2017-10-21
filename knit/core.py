@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import atexit
 import os
 import logging
 import socket
@@ -19,6 +20,7 @@ from .yarn_api import YARNAPI
 
 from py4j.protocol import Py4JError
 from py4j.java_gateway import JavaGateway, GatewayClient
+from py4j.java_collections import MapConverter, ListConverter
 
 logger = logging.getLogger(__name__)
 on_windows = platform.system() == "Windows"
@@ -105,6 +107,7 @@ class Knit(object):
         self.lang = self.conf.get('lang', 'C.UTF-8')
         self.hdfs_home = hdfs_home or self.conf.get(
             'dfs.user.home.base.dir', '/user/' + self.conf['user'])
+        self.client_gateway = None
 
         # must set KNIT_HOME ENV for YARN App
         os.environ['KNIT_HOME'] = self.KNIT_HOME
@@ -126,7 +129,7 @@ class Knit(object):
     def JAR_FILE_PATH(self):
         return os.path.join(self.KNIT_HOME, self.JAR_FILE)
 
-    def _pre_flight_checks(self, num_containers, virtual_cores, memory, env,
+    def _pre_flight_checks(self, num_containers, virtual_cores, memory,
                            files, queue):
         """Some checks to see if app is possible to schedule
 
@@ -163,17 +166,17 @@ class Knit(object):
         if self.hdfs:
             df = self.hdfs.df()
             cap = (df['capacity'] - df['used']) // 2**20
-            fs = [self.JAR_FILE_PATH] + files
-            if env:
-                fs.append(env)
+            fs = [self.JAR_FILE_PATH] + [f for f in files
+                                         if not f.startswith('hdfs://')]
             need = sum(os.stat(f).st_size for f in fs) // 2**20
             # NB: if replication > 1 this might not be enough
             if cap < need:
                 raise KnitException('HDFS space requirement (%iMB) exceeds'
                                     'capacity (%iMB)' % (need, cap))
 
-    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128, env="",
-              files=[], app_name="knit", queue="default", checks=True):
+    def start(self, cmd, num_containers=1, virtual_cores=1, memory=128,
+              files=None, envvars=None, app_name="knit", queue="default",
+              checks=True):
         """
         Method to start a yarn app with a distributed shell
 
@@ -194,10 +197,16 @@ class Knit(object):
         memory: int
             Memory per container (default: 128)
             * The unit for memory is megabytes.
-        env: string
-            Full Path to zipped Python environment
         files: list
-            list of files to be include in each container
+            list of files to be include in each container. If starting with
+            `hdfs://`, assume these already exist in HDFS and don't need
+            uploading. Otherwise, if hdfs3 is installed, existence of the
+            file on HDFS will be checked to see if upload is needed.
+            Files ending with `.zip` will be decompressed in the
+            container before launch.
+        envvars: dict
+            Environment variables to pass to AM *and* workers. Both keys
+            and values must be strings only.
         app_name: String
             Application name shown in YARN (default: "knit")
         queue: String
@@ -210,6 +219,12 @@ class Knit(object):
         applicationId: str
             A yarn application ID string
         """
+        files = files or []
+        envvars = envvars or {'KNIT_LANG': self.lang}
+        for k, v in envvars.items():
+            if not isinstance(k, str) or not isinstance(v, str):
+                raise ValueError('Environment must contain only strings (%s)'
+                                 % ((k, v),))
         if self.app_id:
             raise ValueError('Already started')
         if not isinstance(memory, int):
@@ -219,12 +234,12 @@ class Knit(object):
                 raise KnitException("File argument must be a list of strings")
 
         if checks:
-            self._pre_flight_checks(num_containers, virtual_cores, memory, env,
+            self._pre_flight_checks(num_containers, virtual_cores, memory,
                                     files, queue)
         # From https://github.com/apache/spark/blob/d83c2f9f0b08d6d5d369d9fae04cdb15448e7f0d/python/pyspark/java_gateway.py
         # thank you spark
 
-        # Start a socket that will be used by PythonGatewayServer to communicate its port to us
+        ## Socket for PythonGatewayServer to communicate its port to us
         callback_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         callback_socket.bind(('127.0.0.1', 0))
         callback_socket.listen(1)
@@ -237,7 +252,7 @@ class Knit(object):
                 "--callbackHost", str(callback_host), "--callbackPort",
                 str(callback_port)]
 
-        # Launch the Java gateway.
+        ## Launch the Java gateway.
         # We open a pipe to stdin so that the Java gateway can die when the pipe is broken
         if not on_windows:
             # Don't send ctrl-c / SIGINT to the Java gateway:
@@ -248,6 +263,7 @@ class Knit(object):
             # preexec_fn not supported on Windows
             proc = Popen(args, stdin=PIPE)
         self.proc = proc
+        atexit.register(self.__del__)
         gateway_port = None
         # We use select() here in order to avoid blocking indefinitely if the
         # subprocess dies before connecting
@@ -271,11 +287,14 @@ class Knit(object):
         gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
         self.client = gateway.entry_point
         self.client_gateway = gateway
-        upload = self.check_env_needs_upload(env)
+        files = [(f if self.check_needs_upload(f) else ('hdfs://' + f))
+                 for f in files]
+        jfiles = ListConverter().convert(files, gateway._gateway_client)
+        jenv = MapConverter().convert(envvars, gateway._gateway_client)
 
-        self.app_id = self.client.start(env, ','.join(files), app_name, queue,
-                                        str(upload), self.lang)
+        self.app_id = self.client.start(jfiles, jenv, app_name, queue)
 
+        ## Wait for AM to appear
         long_timeout = 100
         master_rpcport = -1
         while master_rpcport == -1:
@@ -299,7 +318,9 @@ class Knit(object):
         gateway = JavaGateway(GatewayClient(
             address=master_rpchost, port=master_rpcport), auto_convert=True)
         self.master = gateway.entry_point
-        self.master.init(env, ','.join(files), cmd, num_containers,
+        jfiles = ListConverter().convert(files, gateway._gateway_client)
+        jenv = MapConverter().convert(envvars, gateway._gateway_client)
+        self.master.init(jfiles, jenv, cmd, num_containers,
                          virtual_cores, memory)
 
         return self.app_id
@@ -520,15 +541,13 @@ class Knit(object):
             raise ImportError('Set the `hdfs` attribute to be able to list'
                               'environments.')
 
-    def check_env_needs_upload(self, env_path):
-        """Upload is needed if zip file does not exist in HDFS or is older"""
-        if not env_path:
-            return False
+    def check_needs_upload(self, path):
+        """Upload is needed if file does not exist in HDFS or is older"""
         if self.upload_always:
             return True
-        fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(env_path))
+        fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(path))
         if self.hdfs and self.hdfs.exists(fn):
-            st = os.stat(env_path)
+            st = os.stat(path)
             size = st.st_size
             t = st.st_mtime
             info = self.hdfs.info(fn)

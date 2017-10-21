@@ -216,41 +216,45 @@ class CondaCreator(object):
         else:
             env_path = self._create_env(env_name, packages, remove)
 
-        return self.zip_env(env_path)
+        return zip_path(env_path)
 
-    def zip_env(self, env_path):
-        """
-        Zip env directory
 
-        Parameters
-        ----------
-        env_path : string
+def zip_path(path, out_file=None):
+    """
+    Zip up directory
 
-        Returns
-        -------
-        path : string
-            path to zipped file
-        """
+    Parameters
+    ----------
+    path : string
+    out_path : str
+        Output zip-file; if note given, same as input path with
+        .zip appended
 
-        fname = os.path.basename(env_path) + '.zip'
-        env_dir = os.path.dirname(env_path)
-        zFile = os.path.join(env_dir, fname)
-        
-        # ZipFile does not have a contextmanager in Python 2.6
-        f = zipfile.ZipFile(zFile, 'w', allowZip64=True)
-        try:
-            logger.info('Creating: %s' % zFile)
-            for root, dirs, files in os.walk(env_path):
-                for file in files:
-                    relfile = os.path.join(
-                        os.path.relpath(root, env_dir), file)
-                    absfile = os.path.join(root, file)
-                    try:
-                        os.stat(absfile)
-                    except OSError:
-                        logger.info('Skipping zip for %s' % absfile)
-                        continue
-                    f.write(absfile, relfile)
-            return zFile
-        finally:
-            f.close()
+    Returns
+    -------
+    path : string
+        path to zipped file
+    """
+
+    fname = os.path.basename(path) + '.zip'
+    env_dir = os.path.dirname(path)
+    zFile = out_file or os.path.join(env_dir, fname)
+
+    # ZipFile does not have a contextmanager in Python 2.6
+    f = zipfile.ZipFile(zFile, 'w', allowZip64=True)
+    try:
+        logger.info('Creating: %s' % zFile)
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                relfile = os.path.join(
+                    os.path.relpath(root, env_dir), file)
+                absfile = os.path.join(root, file)
+                try:
+                    os.stat(absfile)
+                except OSError:
+                    logger.info('Skipping zip for %s' % absfile)
+                    continue
+                f.write(absfile, relfile)
+        return zFile
+    finally:
+        f.close()

@@ -3,7 +3,7 @@ import warnings
 
 from .utils import *
 from .core import *
-from .env import CondaCreator
+from .env import CondaCreator, zip_path
 from .yarn_api import YARNAPI
 try:
     from .dask_yarn import DaskYARNCluster
