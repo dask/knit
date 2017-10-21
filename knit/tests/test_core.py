@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import time
 import pytest
@@ -156,9 +158,11 @@ def test_memory(k):
 
 def test_cmd_w_conda_env(k):
     env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
-    cmd = "$PYTHON_BIN -c 'import sys; print(sys.version_info);" \
-          " import random; print(str(random.random()))'"
-    k.start(cmd, env=env_zip, memory=128)
+    bn = os.path.basename(env_zip)
+    pref = bn + '/' + bn[:-4]
+    cmd = ("{pref}/bin/python -c 'import sys; print(sys.version_info);"
+           " import random; print(str(random.random()))'".format(pref=pref))
+    k.start(cmd, files=[env_zip], memory=128)
 
     if not k.wait_for_completion(30):
         k.kill()

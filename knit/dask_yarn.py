@@ -119,8 +119,7 @@ class DaskYARNCluster(object):
         bn = os.path.basename(self.env)
         pref = bn + '/' + bn[:-4]  # like myenv.zip/myenv
         command = ('{pref}/bin/python {pref}/bin/dask-worker --nprocs=1 '
-                   '--nthreads={cpus} --memory-limit={mem} --no-bokeh {addr} > '
-                   '/tmp/worker-log.out 2> /tmp/worker-log.err'
+                   '--nthreads={cpus} --memory-limit={mem} --no-bokeh {addr} '
                    ''.format(cpus=cpus, mem=memory * 1e6, pref=pref,
                              addr=self.local_cluster.scheduler.address))
 
