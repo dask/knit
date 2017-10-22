@@ -172,6 +172,14 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
 
         val localResources = HashMap[String, LocalResource]()
         val env = collection.mutable.Map[String, String]()
+        
+        // KNIT_LANG env from Knit.lang
+        val l = s"$lang"
+        logger.info(s"Setting container language to '$lang'")
+        env("LC_ALL") = l
+        env("LANG") = l
+
+        // All other variables; these take prescedence if also include language things
         for ((k, v) <- this.envin) {
           env(k) = v
         }
@@ -186,16 +194,12 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
             var p = new Path(fileName)
             val name = p.getName  
             val p2 = new Path(".knitDeps/" + name)
-            logger.info(f"RESOURCE: $p => $p2 $name $iszip")
+            logger.info(f"RESOURCE: $p => $p2 archive=$iszip")
             setUpLocalResource(p2, fileUpload, archived=iszip)
             localResources(name) = fileUpload
           }
         }
 
-        val l = s"$lang"
-        logger.info(s"Setting container language to '$lang'")
-        env("LC_ALL") = l
-        env("LANG") = l
         setUpEnv(env)
         
         val ctx = Records.newRecord(classOf[ContainerLaunchContext])
