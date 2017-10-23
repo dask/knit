@@ -58,6 +58,13 @@ def k():
             pass
 
 
+def test_connection_error():
+    k = Knit(rm_port=8089)
+    with pytest.raises(YARNException) as e:
+        k.start('ls')
+    assert 'proxy' in str(e)
+
+
 def test_argument_parsing(k):
     cmd = "sleep 10"
     with pytest.raises(KnitException):

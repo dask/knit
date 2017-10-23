@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 class YARNAPI(object):
     timeout = 2  # for REST HTTP calls
 
-    def __init__(self, rm, rm_port, scheme='http'):
+    def __init__(self, rm, rm_port, scheme='http', gateway_path=''):
         self.rm = rm
         self.rm_port = rm_port
         self.scheme = scheme
+        self.gateway_path = gateway_path
         self.host_port = "{0}:{1}".format(self.rm, self.rm_port)
-        self.url = scheme + '://' + self.host_port + '/ws/v1/'
+        self.url = scheme + '://' + self.host_port + gateway_path + '/ws/v1/'
 
     @property
     def apps(self):

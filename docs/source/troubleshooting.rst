@@ -141,6 +141,20 @@ Although application submission and launching are handled via RPCs in scala, sev
 informational calls are made using the Yarn REST end-points. These must be
 reachable.
 
+If you see HTTP connection errors, then there is a possibility that the end-points are
+protected by a proxy/gateway such as Knox. You will need to find the appropriate host, port
+and path to supply to YARNAPI, such as:
+
+.. code-block::python
+
+   k = knit.Knit(rm='proxy.server.org', rm_port=9999, gateway_path='/default/resourcemanager')
+
+The example would set the API end-point to ``'proxy.server.org:9999/default/resourcemanager/ws/v1/'``,
+and whether access is HTTP or HTTPS would depend on the value of ``'yarn.http.policy'``.
+
+There is no way for Knit to be able to automatically determine the right URL to contact,
+the information must come from systems operations.
+
 IP of scheduler
 ~~~~~~~~~~~~~~~
 
