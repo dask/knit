@@ -152,7 +152,7 @@ class Knit(object):
                 m = 'Connection timeout'
             else:
                 m = 'Connection error'
-            raise YARNException(m + ' when talking to the'
+            raise YARNException(m + ' when talking to the '
                                 'YARN REST server at {}. This can mean that '
                                 'the server/port values are wrong, that you '
                                 'are using the wrong protocol (http/https) or '
@@ -370,7 +370,10 @@ class Knit(object):
             List of dicts with each container's details
 
         """
-        return self.yarn_api.app_containers(self.app_id)
+        if self.app_id:
+            return self.yarn_api.app_containers(self.app_id)
+        else:
+            raise KnitException('Cannot get containers, app has not started')
 
     def get_container_statuses(self):
         """Get status info for each container
@@ -454,7 +457,10 @@ class Knit(object):
         log: dictionary
             logs from each container (when possible)
         """
-        return self.yarn_api.logs(self.app_id, shell=shell)
+        if self.app_id:
+            return self.yarn_api.logs(self.app_id, shell=shell)
+        else:
+            raise KnitException('Cannot get logs, app not started')
 
     def print_logs(self, shell=False):
         """print out a more console-friendly version of logs()"""
@@ -529,7 +535,10 @@ class Knit(object):
         log: dictionary
             status of application
         """
-        return self.yarn_api.apps_info(self.app_id)
+        if self.app_id:
+            return self.yarn_api.apps_info(self.app_id)
+        else:
+            raise KnitException("Cannot get status, app not started")
     
     def runtime_status(self):
         """ Get runtime status of an application

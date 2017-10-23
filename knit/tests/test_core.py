@@ -65,6 +65,16 @@ def test_connection_error():
     assert 'proxy' in str(e)
 
 
+def test_not_started(k):
+    with pytest.raises(KnitException):
+        k.logs()
+    with pytest.raises(KnitException):
+        k.status()
+    with pytest.raises(KnitException):
+        k.get_containers()
+    assert k.runtime_status() == 'NONE'
+
+
 def test_argument_parsing(k):
     cmd = "sleep 10"
     with pytest.raises(KnitException):
