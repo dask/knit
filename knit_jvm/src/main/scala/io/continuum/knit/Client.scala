@@ -78,9 +78,11 @@ object Client extends Logging {
     System.exit(0)
   }
   
-  def start(pythonEnv: String, files: String, appName: String, queue: String, upload: String,
-            lang: String) : String = {
+  def start(files2: java.util.ArrayList[String], envin2: java.util.HashMap[String, String],
+            appName: String, queue: String) : String = {
     logger.info("Starting Application Master")
+    var files = files2.asScala
+    var envin = envin2.asScala
 
     implicit val conf = new YarnConfiguration()
     val fs = FileSystem.get(conf)
@@ -115,39 +117,28 @@ object Client extends Logging {
     val localResources = HashMap[String, LocalResource]()
     //setup env to get all yarn and hadoop classes in classpath
     val env = collection.mutable.Map[String, String]()
+    for ((k, v) <- envin) {
+      env(k) = v
+    }
     env("KNIT_USER") = UserGroupInformation.getCurrentUser.getShortUserName
     env("KNIT_YARN_STAGING_DIR") = stagingDirPath.toString
-    env("KNIT_LANG") = lang
 
     if (files.length > 0) {
-      val fileArray = files.split(",")
-      for (fileName <- fileArray) {
-        val file = new File(fileName)
-        uploadFile(file.getAbsolutePath)  
-        val name = file.getName  
-
+      for (fileName <- files) {
+        var iszip = false
+        if (fileName.endsWith(".zip")) {
+          iszip = true
+        }
         val fileUpload = Records.newRecord(classOf[LocalResource])
-        val HDFS_FILE_UPLOAD = new Path(stagingDirPath, name)
-        setUpLocalResource(HDFS_FILE_UPLOAD.makeQualified(fs.getUri, fs.getWorkingDirectory), fileUpload)
+        var p = new Path(fileName)
+        val name = p.getName  
+        if (fileName.startsWith("hdfs://")) {
+          logger.debug(s"HDFS existing resource $fileName")
+        } else {
+          val file = new File(fileName)
+          uploadFile(file.getAbsolutePath)  
+        }
       }
-    }
-
-    if (pythonEnv.nonEmpty) {
-      //TODO: detect file suffix
-      if (upload == "True"){
-        uploadFile(pythonEnv)
-      } else {
-        logger.debug("Using cached environment")
-      }
-      val envFile = new java.io.File(pythonEnv)
-      val envZip = envFile.getName
-      val envName = envZip.split('.').init(0)
-      val appMasterPython = Records.newRecord(classOf[LocalResource])
-      val PYTHON_ZIP = new Path(stagingDirPath, envZip)
-      setUpLocalResource(PYTHON_ZIP.makeQualified(fs.getUri, fs.getWorkingDirectory), appMasterPython, archived = true)
-      localResources("PYTHON_DIR") = appMasterPython
-      env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
-      env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
     }
 
     //add the jar which contains the Application master code to classpath

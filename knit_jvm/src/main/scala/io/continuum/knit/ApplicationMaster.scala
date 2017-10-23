@@ -25,7 +25,7 @@ import io.continuum.knit.Utils._
 import py4j.GatewayServer
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable.{ArrayBuffer, HashMap}
+import scala.collection.mutable.{ArrayBuffer, HashMap, Map}
 
 object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler with NMClientAsync.CallbackHandler {
   
@@ -40,8 +40,8 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
   var outstandingRequests = List[ContainerRequest]()
   var cred: Credentials = _
   
-  var files: String = _
-  var pythonEnv: String = _
+  var files: ArrayBuffer[String] = _
+  var envin: Map[String, String] = _
   var shellCMD: String = _
   
   var numRequested = 0
@@ -94,11 +94,21 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
     nmClient.start()
   }
   
-  def init(pythonEnv: String, files: String, shellCMD: String, numContainers: Int, vCores: Int, mem: Int) {
-    logger.info("Init application master")
-    
-    this.pythonEnv = pythonEnv
-    this.files = files
+  def init(files: java.util.ArrayList[String], envin: java.util.HashMap[String, String],
+           shellCMD: String, numContainers: Int, vCores: Int, mem: Int) {
+    logger.info("Init application master with files and env:")
+    logger.info(f"$files")
+    logger.info(f"$envin")
+    this.files = ArrayBuffer[String]()
+    this.envin = Map[String, String]()
+
+    for ((k, v) <- envin.asScala) {
+      this.envin(k) = v
+    }
+    for (k <- files.asScala) {
+      this.files += k
+    }
+
     this.shellCMD = shellCMD
     
     val previousAttempts = registerResponse.getContainersFromPreviousAttempts
@@ -145,7 +155,7 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
     val lang = sys.env.get("KNIT_LANG").get
     val stagingDirPath = new Path(System.getenv("KNIT_YARN_STAGING_DIR"))
 
-    logger.debug(s"User: $user StagingDir: $stagingDirPath")
+    logger.info(s"User: $user StagingDir: $stagingDirPath")
     logger.info(s"Running command in container: $shellCMD")
 
     //containers allocated, first remove all requests    
@@ -162,39 +172,34 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
 
         val localResources = HashMap[String, LocalResource]()
         val env = collection.mutable.Map[String, String]()
-  
-        //setup local resources
-        if (files.length > 0) {
-          val fileArray = files.split(",")
-          for (fileName <- fileArray) {
-            val file = new File(fileName)
-            val name = file.getName
-    
-            logger.debug(s"Pulling File: $name")
-            val localfile = Records.newRecord(classOf[LocalResource])
-            val HDFS_FILE_PATH = new Path(stagingDirPath, name).makeQualified(fs.getUri, fs.getWorkingDirectory)
-            setUpLocalResource(HDFS_FILE_PATH, localfile)
-            localResources(name) = localfile
-          }
-        }
-  
-        //setup python resources
-        if (pythonEnv.nonEmpty) {
-          val appMasterPython = Records.newRecord(classOf[LocalResource])
-          val envFile = new File(pythonEnv)
-          val envZip = envFile.getName
-          val envName = envZip.split('.').init(0)
-          val PYTHON_ZIP = new Path(stagingDirPath, envZip).makeQualified(fs.getUri, fs.getWorkingDirectory)
-          setUpLocalResource(PYTHON_ZIP, appMasterPython, archived = true)
-          // set up local ENV
-          env("PYTHON_BIN") = s"./PYTHON_DIR/$envName/bin/python"
-          env("CONDA_PREFIX") = s"./PYTHON_DIR/$envName/"
-          localResources("PYTHON_DIR") = appMasterPython
-        }
+        
+        // KNIT_LANG env from Knit.lang
         val l = s"$lang"
         logger.info(s"Setting container language to '$lang'")
         env("LC_ALL") = l
         env("LANG") = l
+
+        // All other variables; these take prescedence if also include language things
+        for ((k, v) <- this.envin) {
+          env(k) = v
+        }
+  
+        if (files.length > 0) {
+          for (fileName <- files) {
+            var iszip = false
+            if (fileName.endsWith(".zip")) {
+              iszip = true
+            }
+            val fileUpload = Records.newRecord(classOf[LocalResource])
+            var p = new Path(fileName)
+            val name = p.getName  
+            val p2 = new Path(".knitDeps/" + name)
+            logger.info(f"RESOURCE: $p => $p2 archive=$iszip")
+            setUpLocalResource(p2, fileUpload, archived=iszip)
+            localResources(name) = fileUpload
+          }
+        }
+
         setUpEnv(env)
         
         val ctx = Records.newRecord(classOf[ContainerLaunchContext])

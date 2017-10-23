@@ -41,4 +41,5 @@ def get_log_content(s):
     st = """<td class="content">"""
     ind0 = s.find(st) + len(st)
     ind1 = s[ind0:].find("</td>")
-    return s[ind0:ind0+ind1]
+    out = s[ind0:ind0+ind1]
+    return out.lstrip('\n          <pre>').rstrip('</pre>\n        ')

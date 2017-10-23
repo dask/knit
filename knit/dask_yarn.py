@@ -7,7 +7,7 @@ from hashlib import sha1
 from tornado import gen
 from toolz import unique
 
-from knit import Knit, CondaCreator
+from knit import Knit, CondaCreator, zip_path
 from distributed import LocalCluster
 
 global_packages = ['dask>=0.14', 'distributed>=1.16']
@@ -53,7 +53,7 @@ class DaskYARNCluster(object):
         self.env = env
         self.application_master_container = None
         self.app_id = None
-        self.channels = channels
+        self.channels = channels or []
         self.conda_pars = conda_pars
 
         try:
@@ -96,35 +96,35 @@ class DaskYARNCluster(object):
         -------
         YARN application ID.
         """
-        c = CondaCreator(channels=self.channels, **(self.conda_pars or {}))
         if self.env is None:
+            c = CondaCreator(channels=self.channels, **(self.conda_pars or {}))
             env_name = 'dask-' + sha1(
-                '-'.join(self.packages).encode()).hexdigest()
+                '-'.join(self.packages + self.channels).encode()).hexdigest()
             env_path = os.path.join(c.conda_envs, env_name)
             if os.path.exists(env_path + '.zip'):
                 # zipfile exists, ready to upload
                 self.env = env_path + '.zip'
             elif os.path.exists(env_path):
                 # environment exists, can zip and upload
-                c.zip_env(env_path)
-                self.env = env_path + '.zip'
+                self.env = zip_path(env_path)
             else:
                 # create env from scratch
                 self.env = c.create_env(env_name=env_name,
                                         packages=self.packages)
         elif not self.env.endswith('.zip'):
             # given env directory, so zip it
-            c.zip_env(self.env)
-            self.env = self.env + '.zip'
+            self.env = zip_path(self.env)
 
         # TODO: memory should not be total available?
-        command = '$PYTHON_BIN $CONDA_PREFIX/bin/dask-worker --nprocs=1 ' \
-                  '--nthreads=%d --memory-limit=%d %s > ' \
-                  '/tmp/worker-log.out 2> /tmp/worker-log.err' % (
-                      cpus, memory * 1e6,
-                      self.local_cluster.scheduler.address)
+        bn = os.path.basename(self.env)
+        pathsep = '/'  # assume execution is always on posix
+        pref = pathsep.join([bn, os.path.splitext(bn)[0]])  # like myenv.zip/myenv
+        command = ('{pref}/bin/python {pref}/bin/dask-worker --nprocs=1 '
+                   '--nthreads={cpus} --memory-limit={mem} --no-bokeh {addr} '
+                   ''.format(cpus=cpus, mem=memory * 1e6, pref=pref,
+                             addr=self.local_cluster.scheduler.address))
 
-        app_id = self.knit.start(command, env=self.env,
+        app_id = self.knit.start(command, files=[self.env],
                                  num_containers=n_workers, virtual_cores=cpus,
                                  memory=memory, checks=checks, **kwargs)
         self.app_id = app_id
