@@ -12,6 +12,7 @@ import socket
 from subprocess import Popen, PIPE, call
 import struct
 import time
+import weakref
 
 from .conf import get_config, DEFAULT_KNIT_HOME
 from .env import CondaCreator
@@ -89,6 +90,7 @@ class Knit(object):
 
     JAR_FILE = "knit-1.0-SNAPSHOT.jar"
     JAVA_APP = "io.continuum.knit.Client"
+    instances = weakref.WeakSet()
 
     def __init__(self, autodetect=True, upload_always=False, hdfs_home=None,
                  knit_home=DEFAULT_KNIT_HOME, hdfs=None, pars=None,
@@ -119,6 +121,7 @@ class Knit(object):
         self.app_id = None
         self.proc = None
         self.hdfs = hdfs
+        self.instances.add(self)
 
     def __str__(self):
         return "Knit<RM={0}:{1}>".format(self.conf['rm'], self.conf['rm_port'])
@@ -263,7 +266,6 @@ class Knit(object):
             # preexec_fn not supported on Windows
             proc = Popen(args, stdin=PIPE)
         self.proc = proc
-        atexit.register(self.__del__)
         gateway_port = None
         # We use select() here in order to avoid blocking indefinitely if the
         # subprocess dies before connecting
@@ -494,6 +496,7 @@ class Knit(object):
             self.proc.terminate()
             self.proc.communicate()
             self.proc = None
+        self.client = None
         out = self.runtime_status() == 'KILLED'
         return out
 
@@ -503,6 +506,7 @@ class Knit(object):
                 self.kill()
             except:
                 pass
+        self.app_id = None
 
     def status(self):
         """ Get status of an application
@@ -557,3 +561,11 @@ class Knit(object):
                 return True
         else:
             return True
+
+    @classmethod
+    def cleanup(cls):
+        # called on program exit to destroy lingering connections/apps
+        for instance in cls.instances:
+            instance.kill()
+
+atexit.register(Knit.cleanup)
