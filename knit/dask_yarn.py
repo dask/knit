@@ -118,7 +118,7 @@ class DaskYARNCluster(object):
         # TODO: memory should not be total available?
         bn = os.path.basename(self.env)
         pathsep = '/'  # assume execution is always on posix
-        pref = pathsep.join([bn, os.path.splitext(bn)])  # like myenv.zip/myenv
+        pref = pathsep.join([bn, os.path.splitext(bn)[0]])  # like myenv.zip/myenv
         command = ('{pref}/bin/python {pref}/bin/dask-worker --nprocs=1 '
                    '--nthreads={cpus} --memory-limit={mem} --no-bokeh {addr} '
                    ''.format(cpus=cpus, mem=memory * 1e6, pref=pref,
