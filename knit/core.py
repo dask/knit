@@ -90,7 +90,7 @@ class Knit(object):
 
     JAR_FILE = "knit-1.0-SNAPSHOT.jar"
     JAVA_APP = "io.continuum.knit.Client"
-    instances = weakref.WeakSet()
+    _instances = weakref.WeakSet()
 
     def __init__(self, autodetect=True, upload_always=False, hdfs_home=None,
                  knit_home=DEFAULT_KNIT_HOME, hdfs=None, pars=None,
@@ -206,7 +206,9 @@ class Knit(object):
             uploading. Otherwise, if hdfs3 is installed, existence of the
             file on HDFS will be checked to see if upload is needed.
             Files ending with `.zip` will be decompressed in the
-            container before launch.
+            container before launch as a directory with the same name as the
+            file: if myarc.zip contains files inside a directory stuff/, to
+            the container they will appear at ./myarc.zip/stuff/* .
         envvars: dict
             Environment variables to pass to AM *and* workers. Both keys
             and values must be strings only.
@@ -534,7 +536,7 @@ class Knit(object):
     def list_envs(self):
         """List knit conda environments already in HDFS
         
-        Looks staging directory for zip-files
+        Looks in staging directory for zip-files
         
         Returns: list of dict
             Details for each zip-file."""
@@ -563,9 +565,9 @@ class Knit(object):
             return True
 
     @classmethod
-    def cleanup(cls):
+    def _cleanup(cls):
         # called on program exit to destroy lingering connections/apps
         for instance in cls.instances:
             instance.kill()
 
-atexit.register(Knit.cleanup)
+atexit.register(Knit._cleanup)
