@@ -567,7 +567,7 @@ class Knit(object):
     @classmethod
     def _cleanup(cls):
         # called on program exit to destroy lingering connections/apps
-        for instance in cls.instances:
+        for instance in cls._instances:
             instance.kill()
 
 atexit.register(Knit._cleanup)
