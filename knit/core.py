@@ -97,12 +97,14 @@ class Knit(object):
                  **kwargs):
 
         self.conf = get_config(autodetect=autodetect, pars=pars, **kwargs)
+        gateway_path = self.conf.get('gateway_path', '')
 
         if self.conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port_https'],
-                                    scheme='https')
+                                    scheme='https', gateway_path=gateway_path)
         else:
-            self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port'])
+            self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port'],
+                                    gateway_path=gateway_path)
 
         self.KNIT_HOME = knit_home
         self.upload_always = upload_always
@@ -145,8 +147,17 @@ class Knit(object):
             met = self.yarn_api.cluster_metrics()
         except YARNException:
             raise
-        except requests.ConnectionError:
-            raise KnitException('No response from RM ' + self.yarn_api.url)
+        except requests.RequestException as e:
+            if isinstance(e, requests.Timeout):
+                m = 'Connection timeout'
+            else:
+                m = 'Connection error'
+            raise YARNException(m + ' when talking to the '
+                                'YARN REST server at {}. This can mean that '
+                                'the server/port values are wrong, that you '
+                                'are using the wrong protocol (http/https) or '
+                                'that you need to route through a proxy.'
+                                ''.format(self.yarn_api.url))
         if met['activeNodes'] < 1:
             raise KnitException('No name-nodes active')
         # What if we simply don't have the full yarn-site.xml available?
@@ -359,7 +370,10 @@ class Knit(object):
             List of dicts with each container's details
 
         """
-        return self.yarn_api.app_containers(self.app_id)
+        if self.app_id:
+            return self.yarn_api.app_containers(self.app_id)
+        else:
+            raise KnitException('Cannot get containers, app has not started')
 
     def get_container_statuses(self):
         """Get status info for each container
@@ -443,7 +457,10 @@ class Knit(object):
         log: dictionary
             logs from each container (when possible)
         """
-        return self.yarn_api.logs(self.app_id, shell=shell)
+        if self.app_id:
+            return self.yarn_api.logs(self.app_id, shell=shell)
+        else:
+            raise KnitException('Cannot get logs, app not started')
 
     def print_logs(self, shell=False):
         """print out a more console-friendly version of logs()"""
@@ -518,7 +535,10 @@ class Knit(object):
         log: dictionary
             status of application
         """
-        return self.yarn_api.apps_info(self.app_id)
+        if self.app_id:
+            return self.yarn_api.apps_info(self.app_id)
+        else:
+            raise KnitException("Cannot get status, app not started")
     
     def runtime_status(self):
         """ Get runtime status of an application
