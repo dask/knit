@@ -121,7 +121,7 @@ class Knit(object):
         self.app_id = None
         self.proc = None
         self.hdfs = hdfs
-        self.instances.add(self)
+        self._instances.add(self)
 
     def __str__(self):
         return "Knit<RM={0}:{1}>".format(self.conf['rm'], self.conf['rm_port'])
