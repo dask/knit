@@ -134,8 +134,8 @@ client. In the same session as the DaskYarnCluster you could do:
    c = Client(cluster)  # cluster is the running DaskYarnCluster instance
    c.get_versions()
 
-REST access to YARN
-~~~~~~~~~~~~~~~~~~~
+REST routing to YARN
+~~~~~~~~~~~~~~~~~~~~
 
 Although application submission and launching are handled via RPCs in scala, several
 informational calls are made using the Yarn REST end-points. These must be
@@ -154,6 +154,25 @@ and whether access is HTTP or HTTPS would depend on the value of ``'yarn.http.po
 
 There is no way for Knit to be able to automatically determine the right URL to contact,
 the information must come from systems operations.
+
+REST auth
+~~~~~~~~~
+
+The REST end-points may require Kerberos authentication, which will generally depend on the
+value of configuration parameter ``hadoop.http.authentication.type``. The extra package
+`request-kerberos`_ is required, but otherwise the connection should be seamless, so long
+as a valid ticket exists.
+
+.. _request-kerberos: https://github.com/requests/requests-kerberos
+
+Alternatively, in the case that the authentication is simple, but anonymous access is disallowed,
+you must provide a password upon instantiation and perhaps a user-name different from the apparent
+user who own the session.
+
+.. code-block::python
+
+   k = knit.Knit(password='mypass', user='alternate_user')
+
 
 IP of scheduler
 ~~~~~~~~~~~~~~~

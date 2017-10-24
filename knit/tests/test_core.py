@@ -84,6 +84,18 @@ def test_argument_parsing(k):
         k.start(cmd, memory='128')
 
 
+def test_password_pass():
+    with pytest.raises(KnitException):
+        k = Knit(pars={
+            'hadoop.http.authentication.type': 'simple',
+            'hadoop.http.authentication.simple.anonymous.allowed': 'false'})
+    k = Knit(pars={
+        'hadoop.http.authentication.type': 'simple',
+        'hadoop.http.authentication.simple.anonymous.allowed': 'false'},
+        password='hello')
+    assert k.yarn_api.auth[1] == 'hello'
+
+
 def test_cmd(k):
     cmd = "hostname"
     k.start(cmd, memory=128)
