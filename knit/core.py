@@ -98,13 +98,27 @@ class Knit(object):
 
         self.conf = get_config(autodetect=autodetect, pars=pars, **kwargs)
         gateway_path = self.conf.get('gateway_path', '')
+        kerb = self.conf.get(
+            'hadoop.http.authentication.type', '') == 'kerberos'
+        if not kerb and self.conf.get('hadoop.http.authentication.simple.'
+                                      'anonymous.allowed', '') == 'false':
+            if 'password' not in self.conf:
+                raise KnitException('Simple auth required: please supply'
+                                    '`password=`.')
+            pw = self.conf['password']
+        else:
+            pw = None
 
         if self.conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port_https'],
-                                    scheme='https', gateway_path=gateway_path)
+                                    scheme='https', gateway_path=gateway_path,
+                                    kerberos=kerb, username=self.conf['user'],
+                                    password=pw)
         else:
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port'],
-                                    gateway_path=gateway_path)
+                                    gateway_path=gateway_path,
+                                    kerberos=kerb, username=self.conf['user'],
+                                    password=pw)
 
         self.KNIT_HOME = knit_home
         self.upload_always = upload_always
