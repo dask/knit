@@ -112,12 +112,12 @@ class Knit(object):
         if self.conf.get('yarn.http.policy', '').upper() == "HTTPS_ONLY":
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port_https'],
                                     scheme='https', gateway_path=gateway_path,
-                                    kerberos=kerb, user=self.conf['user'],
+                                    kerberos=kerb, username=self.conf['user'],
                                     password=pw)
         else:
             self.yarn_api = YARNAPI(self.conf['rm'], self.conf['rm_port'],
                                     gateway_path=gateway_path,
-                                    kerberos=kerb, user=self.conf['user'],
+                                    kerberos=kerb, username=self.conf['user'],
                                     password=pw)
 
         self.KNIT_HOME = knit_home
