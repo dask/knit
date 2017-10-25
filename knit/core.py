@@ -317,10 +317,10 @@ class Knit(object):
                               auto_convert=True)
         self.client = gateway.entry_point
         self.client_gateway = gateway
-        print(files)
+        logger.debug("Files submitted: %s" % files)
         upfiles = [f for f in files if (not f.startswith('hdfs://')
                    and self.check_needs_upload(f))]
-        print(upfiles)
+        logger.debug("Files to upload: %s" % upfiles)
         jfiles = ListConverter().convert(upfiles, gateway._gateway_client)
         jenv = MapConverter().convert(envvars, gateway._gateway_client)
 
@@ -353,7 +353,7 @@ class Knit(object):
         rfiles = [f if f.startswith('hdfs://') else
                   '/'.join([self.hdfs_home, '.knitDeps', os.path.basename(f)])
                   for f in files]
-        print(rfiles)
+        logger.debug("Resource files: %s" % rfiles)
         jfiles = ListConverter().convert(rfiles, gateway._gateway_client)
         jenv = MapConverter().convert(envvars, gateway._gateway_client)
         self.master.init(jfiles, jenv, cmd, num_containers,
@@ -593,7 +593,6 @@ class Knit(object):
         if self.upload_always:
             return True
         fn = '/'.join([self.hdfs_home, '.knitDeps', os.path.basename(path)])
-        print("Check", fn)
         if self.hdfs and self.hdfs.exists(fn):
             st = os.stat(path)
             size = st.st_size
