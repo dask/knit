@@ -211,7 +211,7 @@ def test_hdfs_home():
                replication_factor=1, hdfs_home=d)
 
         env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
-        k.start('env', env=env_zip, memory=128)
+        k.start('env', files=[env_zip], memory=128)
 
         assert d + '/.knitDeps' in hdfs.ls(d, False)
         assert d + "/.knitDeps/knit-1.0-SNAPSHOT.jar" in hdfs.ls(d + '/.knitDeps', False)
@@ -219,10 +219,6 @@ def test_hdfs_home():
         if not k.wait_for_completion(30):
             k.kill()
 
-        time.sleep(5)  # log aggregation
-        logs = k.logs()
-        assert "PYTHON_BIN=" in str(logs)
-        assert "CONDA_PREFIX=" in str(logs)
     finally:
         hdfs.rm(d, True)
         k.kill()
