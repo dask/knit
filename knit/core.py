@@ -18,6 +18,7 @@ from .conf import get_config, DEFAULT_KNIT_HOME
 from .env import CondaCreator
 from .exceptions import KnitException, YARNException
 from .yarn_api import YARNAPI
+from .utils import triple_slash
 
 from py4j.protocol import Py4JError
 from py4j.java_gateway import JavaGateway, GatewayClient
@@ -350,7 +351,7 @@ class Knit(object):
         gateway = JavaGateway(GatewayClient(
             address=master_rpchost, port=master_rpcport), auto_convert=True)
         self.master = gateway.entry_point
-        rfiles = [f if f.startswith('hdfs://') else
+        rfiles = [triple_slash(f) if f.startswith('hdfs://') else
                   '/'.join([self.hdfs_home, '.knitDeps', os.path.basename(f)])
                   for f in files]
         logger.debug("Resource files: %s" % rfiles)
