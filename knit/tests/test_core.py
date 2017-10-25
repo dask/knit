@@ -338,3 +338,17 @@ def test_kill_all(k):
     k.yarn_api.kill_all()
     time.sleep(2)
     assert k.runtime_status() == 'KILLED'
+
+
+def test_existing_path(k):
+    # TODO: is this a good test if we noisily log the upload of files?
+    hdfs3 = pytest.importorskip('hdfs3')
+    hdfs = hdfs3.HDFileSystem()
+    k.hdfs = hdfs
+    cmd = 'ls -l'
+    hdfs.put(__file__, '/tmp/mytestfile')
+    k.start(cmd, files=['hdfs://tmp/mytestfile'])
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    out = k.logs()
+    assert ' mytestfile ' in str(out)
