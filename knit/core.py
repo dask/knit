@@ -18,6 +18,7 @@ from .conf import get_config, DEFAULT_KNIT_HOME
 from .env import CondaCreator
 from .exceptions import KnitException, YARNException
 from .yarn_api import YARNAPI
+from .utils import triple_slash
 
 from py4j.protocol import Py4JError
 from py4j.java_gateway import JavaGateway, GatewayClient
@@ -313,12 +314,15 @@ class Knit(object):
                             " Check that java is installed and the Knit JAR"
                             " file exists.")
 
-        gateway = JavaGateway(GatewayClient(port=gateway_port), auto_convert=True)
+        gateway = JavaGateway(GatewayClient(port=gateway_port),
+                              auto_convert=True)
         self.client = gateway.entry_point
         self.client_gateway = gateway
-        files = [(f if self.check_needs_upload(f) else ('hdfs://' + f))
-                 for f in files]
-        jfiles = ListConverter().convert(files, gateway._gateway_client)
+        logger.debug("Files submitted: %s" % files)
+        upfiles = [f for f in files if (not f.startswith('hdfs://')
+                   and self.check_needs_upload(f))]
+        logger.debug("Files to upload: %s" % upfiles)
+        jfiles = ListConverter().convert(upfiles, gateway._gateway_client)
         jenv = MapConverter().convert(envvars, gateway._gateway_client)
 
         self.app_id = self.client.start(jfiles, jenv, app_name, queue)
@@ -347,7 +351,11 @@ class Knit(object):
         gateway = JavaGateway(GatewayClient(
             address=master_rpchost, port=master_rpcport), auto_convert=True)
         self.master = gateway.entry_point
-        jfiles = ListConverter().convert(files, gateway._gateway_client)
+        rfiles = [triple_slash(f) if f.startswith('hdfs://') else
+                  '/'.join([self.hdfs_home, '.knitDeps', os.path.basename(f)])
+                  for f in files]
+        logger.debug("Resource files: %s" % rfiles)
+        jfiles = ListConverter().convert(rfiles, gateway._gateway_client)
         jenv = MapConverter().convert(envvars, gateway._gateway_client)
         self.master.init(jfiles, jenv, cmd, num_containers,
                          virtual_cores, memory)
@@ -585,7 +593,7 @@ class Knit(object):
         """Upload is needed if file does not exist in HDFS or is older"""
         if self.upload_always:
             return True
-        fn = (self.hdfs_home + '/.knitDeps/' + os.path.basename(path))
+        fn = '/'.join([self.hdfs_home, '.knitDeps', os.path.basename(path)])
         if self.hdfs and self.hdfs.exists(fn):
             st = os.stat(path)
             size = st.st_size

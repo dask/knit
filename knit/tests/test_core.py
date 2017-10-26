@@ -208,10 +208,10 @@ def test_hdfs_home():
     try:
         hdfs.mkdir(d)
         k = Knit(nn='localhost', rm='localhost', nn_port=8020, rm_port=8088,
-               replication_factor=1, hdfs_home=d)
+                 replication_factor=1, hdfs_home=d)
 
         env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
-        k.start('env', env=env_zip, memory=128)
+        k.start('env', files=[env_zip], memory=128)
 
         assert d + '/.knitDeps' in hdfs.ls(d, False)
         assert d + "/.knitDeps/knit-1.0-SNAPSHOT.jar" in hdfs.ls(d + '/.knitDeps', False)
@@ -219,10 +219,6 @@ def test_hdfs_home():
         if not k.wait_for_completion(30):
             k.kill()
 
-        time.sleep(5)  # log aggregation
-        logs = k.logs()
-        assert "PYTHON_BIN=" in str(logs)
-        assert "CONDA_PREFIX=" in str(logs)
     finally:
         hdfs.rm(d, True)
         k.kill()
@@ -338,3 +334,17 @@ def test_kill_all(k):
     k.yarn_api.kill_all()
     time.sleep(2)
     assert k.runtime_status() == 'KILLED'
+
+
+def test_existing_path(k):
+    # TODO: is this a good test if we noisily log the upload of files?
+    hdfs3 = pytest.importorskip('hdfs3')
+    hdfs = hdfs3.HDFileSystem()
+    k.hdfs = hdfs
+    cmd = 'ls -l'
+    hdfs.put(__file__, '/tmp/mytestfile')
+    k.start(cmd, files=['hdfs://tmp/mytestfile'])
+    wait_for_status(k, 'FINISHED')
+    time.sleep(2)
+    out = k.logs()
+    assert ' mytestfile ' in str(out)

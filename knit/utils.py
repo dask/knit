@@ -43,3 +43,10 @@ def get_log_content(s):
     ind1 = s[ind0:].find("</td>")
     out = s[ind0:ind0+ind1]
     return out.lstrip('\n          <pre>').rstrip('</pre>\n        ')
+
+
+def triple_slash(s):
+    if s.startswith('hdfs://') and not s.startswith('hdfs:///'):
+        return 'hdfs:///' + s[7:]
+    else:
+        return s

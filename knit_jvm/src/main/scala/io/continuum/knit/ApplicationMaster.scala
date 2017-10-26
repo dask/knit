@@ -193,9 +193,8 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
             val fileUpload = Records.newRecord(classOf[LocalResource])
             var p = new Path(fileName)
             val name = p.getName  
-            val p2 = new Path(".knitDeps/" + name)
-            logger.info(f"RESOURCE: $p => $p2 archive=$iszip")
-            setUpLocalResource(p2, fileUpload, archived=iszip)
+            logger.info(f"RESOURCE: $p archive=$iszip")
+            setUpLocalResource(p, fileUpload, archived=iszip)
             localResources(name) = fileUpload
           }
         }

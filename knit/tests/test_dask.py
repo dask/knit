@@ -110,7 +110,7 @@ def test_yarn_cluster_add_stop(loop):
 
     client = Client(cluster)
     future = client.submit(lambda x: x + 1, 10)
-    assert future.result() == 11
+    assert future.result() == 11    # waits for cluster to have a worker
 
     info = client.scheduler_info()
     workers = info['workers']
@@ -120,37 +120,28 @@ def test_yarn_cluster_add_stop(loop):
     num_containers = status['runningContainers']
     assert num_containers == 2  # 1 container for the worker and 1 for the AM
 
+    # Add a worker
     cluster.add_workers(n_workers=1, cpus=1, memory=128)
-
-    while num_containers != 3:
-        status = cluster.knit.status()
-        num_containers = status['runningContainers']
-
-    # wait a tad to let workers connect to scheduler
-
     start = time.time()
     while len(client.scheduler_info()['workers']) < 2:
-        time.sleep(0.1)
-        assert time.time() < start + 10
+        time.sleep(1)
+        assert time.time() < start + 60
 
+    status = cluster.knit.status()
+    num_containers = status['runningContainers']
     assert num_containers == 3
-    info = client.scheduler_info()
-    workers = info['workers']
-    assert len(workers) == 2
-
     assert len(cluster.workers) == 2
 
+    # Remove a worker
     cluster.remove_worker(cluster.workers[1])
-    while num_containers != 2:
-        status = cluster.knit.status()
-        num_containers = status['runningContainers']
-
-    time.sleep(2)
-    assert len(cluster.workers) == 1
+    start = time.time()
+    while len(client.scheduler_info()['workers']) == 2:
+        time.sleep(1)
+        assert time.time() < start + 10
 
     # STOP ALL WORKERS!
     cluster.stop()
-    time.sleep(2)
-
-    workers = client.scheduler_info()['workers']
-    assert len(workers) == 0
+    start = time.time()
+    while len(client.scheduler_info()['workers']) > 0:
+        time.sleep(2)
+        assert time.time() < start + 10
