@@ -29,7 +29,10 @@ class DaskYARNCluster(object):
     ----------
     nn, nn_port, rm, rm_port, user, autodetect, lang: see knit.Knit
     env: str or None
-        If provided, the path of a zipped conda env to put in containers
+        If provided, the path of a zipped conda env to put in containers. This
+        can be a local zip file to upload, a zip file already on HDFS (hdfs://)
+        or a directory to zip and upload. If not provided, a default environment
+        will be built, containing dask.
     packages: list of str
         Packages to install in the env to provide to containers *if* env is 
         None. Uses conda spec for pinning versions. dask and distributed will
