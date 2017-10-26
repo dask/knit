@@ -11,11 +11,9 @@ import time
 from functools import wraps
 
 pytest.importorskip('dask')
-import dask.distributed
-from knit.dask_yarn import DaskYARNCluster
+from dask_yarn import DaskYARNCluster
 from knit import CondaCreator, Knit
 from dask.distributed import Client
-from distributed.utils_test import loop
 
 
 def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
