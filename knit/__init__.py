@@ -6,7 +6,7 @@ from .core import *
 from .env import CondaCreator, zip_path
 from .yarn_api import YARNAPI
 try:
-    from .dask_yarn import DaskYARNCluster
+    from dask_yarn import DaskYARNCluster
 except ImportError:    # pragma: no cover
     warnings.warn('dask/distributed not installed, '
                   'DaskYARNCluster not available')
