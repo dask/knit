@@ -208,7 +208,7 @@ def test_hdfs_home():
     try:
         hdfs.mkdir(d)
         k = Knit(nn='localhost', rm='localhost', nn_port=8020, rm_port=8088,
-               replication_factor=1, hdfs_home=d)
+                 replication_factor=1, hdfs_home=d)
 
         env_zip = k.create_env(env_name='dev', packages=['python=2.7'], remove=True)
         k.start('env', files=[env_zip], memory=128)

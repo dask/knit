@@ -111,7 +111,8 @@ class DaskYARNCluster(object):
                 # create env from scratch
                 self.env = c.create_env(env_name=env_name,
                                         packages=self.packages)
-        elif not self.env.endswith('.zip'):
+        elif (not self.env.endswith('.zip') and
+              not self.env.startswith('hdfs://')):
             # given env directory, so zip it
             self.env = zip_path(self.env)
 
@@ -124,7 +125,8 @@ class DaskYARNCluster(object):
                    ''.format(cpus=cpus, mem=memory * 1e6, pref=pref,
                              addr=self.local_cluster.scheduler.address))
 
-        app_id = self.knit.start(command, files=[self.env],
+        files = [self.env] + kwargs.pop('files', [])
+        app_id = self.knit.start(command, files=files,
                                  num_containers=n_workers, virtual_cores=cpus,
                                  memory=memory, checks=checks, **kwargs)
         self.app_id = app_id
