@@ -127,6 +127,7 @@ def test_yarn_cluster_add_stop(loop):
         time.sleep(1)
         assert time.time() < start + 60
 
+    status = cluster.knit.status()
     num_containers = status['runningContainers']
     assert num_containers == 3
     assert len(cluster.workers) == 2
