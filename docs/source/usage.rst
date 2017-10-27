@@ -79,7 +79,7 @@ like the following
 
 .. code-block:: python
 
-   from knit import DaskYARNCluster
+   from dask_yarn import DaskYARNCluster
    cluster = DaskYARNCluster(env='my/conda/env.zip')
    cluster.start(8, cpu=2, memory=2048)
 

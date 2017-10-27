@@ -134,7 +134,7 @@ To start a dask cluster on YARN
 
 .. code-block:: python
 
-   from knit import dask_yarn
+   import dask_yarn
 
    k = Knit()
    env = k.create_env('my-environment',
