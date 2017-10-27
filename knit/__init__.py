@@ -7,13 +7,16 @@ from .env import CondaCreator, zip_path
 from .yarn_api import YARNAPI
 
 
-class DaskYARNCluster(object):
-    def __new__(cls, *args, **kwargs):
-        import dask_yarn
-        warnings.warn("Deprecated use of DaskYARNCluster in the knit "
-                      "namespace. Use the dask_yarn package instead.")
-        o = dask_yarn.DaskYARNCluster.__new__(dask_yarn.DaskYARNCluster)
-        o.__init__(*args, **kwargs)
-        return o
+try:
+    from dask_yarn import DaskYARNCluster as _DaskYARNCluster
+
+    class DaskYARNCluster(_DaskYARNCluster):
+        def __init__(self, *args, **kwargs):
+            warnings.warn("DeprecationWarning: `knit.DaskYARNCluster` is "
+                          "deprecated, please use "
+                          "`dask_yarn.DaskYARNCluster` instead")
+            super().__init__(*args, **kwargs)
+except ImportError:
+    pass
 
 __version__ = "0.2.2"
