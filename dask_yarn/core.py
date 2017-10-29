@@ -200,6 +200,10 @@ class DaskYARNCluster(object):
     def __exit__(self, *args):
         self.close()
 
+    def __repr__(self):
+        return "<Dask on YARN cluster {}:{}>".format(
+            self.knit.conf['rm'], self.knit.conf['rm_port'])
+
     def close(self):
         """Stop the scheduler and workers"""
         self.stop()

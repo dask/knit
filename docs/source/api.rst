@@ -36,7 +36,7 @@ API
 .. autoclass:: Knit
    :members:
 
-.. py:currentmodule:: knit.dask_yarn
+.. py:currentmodule:: dask_yarn.core
 
 .. autosummary::
    DaskYARNCluster
