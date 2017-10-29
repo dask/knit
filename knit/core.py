@@ -140,10 +140,8 @@ class Knit(object):
         self.hdfs = hdfs
         self._instances.add(self)
 
-    def __str__(self):
+    def __repr__(self):
         return "Knit<RM={0}:{1}>".format(self.conf['rm'], self.conf['rm_port'])
-
-    __repr__ = __str__
 
     @property
     def JAR_FILE_PATH(self):
