@@ -137,7 +137,7 @@ To start a dask cluster on YARN
    import dask_yarn
 
    # Specify conda packages and channels for execution environment
-   cluster = dask_yarn.DaskYARNCluster(packages=['python=3.6', 'scikit-learn', 'pandas', 'dask']
+   cluster = dask_yarn.DaskYARNCluster(packages=['python=3.6', 'scikit-learn', 'pandas', 'dask'],
                                        channels=['conda-forge'])
 
    # each worker gets 4GB and two cores
