@@ -350,7 +350,8 @@ class Knit(object):
             address=master_rpchost, port=master_rpcport), auto_convert=True)
         self.master = gateway.entry_point
         rfiles = [triple_slash(f) if f.startswith('hdfs://') else
-                  '/'.join([self.hdfs_home, '.knitDeps', os.path.basename(f)])
+                  '/'.join(['hdfs://', self.hdfs_home, '.knitDeps',
+                            os.path.basename(f)])
                   for f in files]
         logger.debug("Resource files: %s" % rfiles)
         jfiles = ListConverter().convert(rfiles, gateway._gateway_client)
