@@ -141,7 +141,11 @@ To start a dask cluster on YARN
                                        channels=['conda-forge'])
 
    # each worker gets 4GB and two cores
-   cluster.start(nworkers=10, memory=4096, cpus=2)
+   cluster.start(n_workers=10, memory=4096, cpus=2)
 
    from dask.distributed import Client
    client = Client(cluster)
+
+This starts a set of workers on YARN, and a dask scheduler in the current process. We then
+create a client to connect to it. To connect from another python process, we would need to
+use the value of ``cluster.local_cluster.scheduler_address`` in the call to ``Client``.
