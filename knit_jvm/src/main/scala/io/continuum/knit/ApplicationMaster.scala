@@ -243,24 +243,19 @@ object ApplicationMaster extends Logging with AMRMClientAsync.CallbackHandler wi
     }
 
     if (numCompleted >= numRequested) {
-      nmClient.stop()
-      
       try {
         if (numFailed > 0) {
+          // Unregister application master only when it is failed
           rmClient.unregisterApplicationMaster(FinalApplicationStatus.FAILED, "", "")
-        } else {
-          rmClient.unregisterApplicationMaster(FinalApplicationStatus.SUCCEEDED, "", "")
+          nmClient.stop()
+          rmClient.stop()
+          gatewayServer.shutdown()
+          done = true
         }
       } catch {
         case e: Exception => 
           logger.error("Exception", e)
       }
-      
-      rmClient.stop()
-      
-      gatewayServer.shutdown()
-      
-      done = true
     }
   }
   
