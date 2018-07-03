@@ -3,6 +3,18 @@ knit
 
 |Build Status| |Coverage Status|
 
+*Note: This library has been superceded by Skein
+(https://jcrist.github.io/skein/), and is no longer maintained.*
+
+*For deploying Dask on YARN, please see dask-yarn
+(http://dask-yarn.readthedocs.io/), which has been rewritten to use Skein
+instead of Knit.*
+
+*For user issues, please refer to either of those repositories*
+
+- *Dask-Yarn for deploying Dask on YARN (https://github.com/dask/dask-yarn)*
+- *Skein for general YARN/Python interaction (https://github.com/jcrist/skein)*
+
 The ``knit`` library provides a Python interface to Scala for interacting
 with the YARN resource manager.
 
